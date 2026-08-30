@@ -38,6 +38,7 @@ DEFAULTS = {
     "crash_watch": True,
     "crash_dedupe": 60,
     "crash_poll": 8,
+    "crash_analyze": True,
 }
 
 AUTOSTART_TEMPLATE = """[Desktop Entry]
@@ -633,3 +634,74 @@ def detect_new_crashes(watermark):
     """Crashes del kernel/journal posteriores a `watermark`."""
     text = journal_since(True, watermark)
     return parse_journal_crash(text)
+
+
+CRASH_CONFIG = ICON_DIR / "conbarai-crash.json"
+
+# Herramientas de SOLO LECTURA que el análisis de crash puede ejecutar.
+_CRASH_RO_CMDS = [
+    "journalctl",
+    "coredumpctl",
+    "apport-cli",
+    "apport-retrace",
+    "whoopsie",
+    "dmesg",
+    "free",
+    "uptime",
+    "last",
+    "who",
+    "ls",
+    "cat",
+    "grep",
+    "head",
+    "tail",
+    "awk",
+    "sort",
+    "uniq",
+    "wc",
+    "smartctl",
+    "sensors",
+    "systemctl",
+    "loginctl",
+    "nvidia-smi",
+    "lscpu",
+    "ip",
+    "nmcli",
+    "resolvectl",
+    "opencode",
+    "uname",
+    "id",
+    "dpkg",
+    "apt-mark",
+    "basename",
+    "dirname",
+    "readlink",
+    "stat",
+    "du",
+    "find",
+]
+
+
+def crash_config():
+    """Config de opencode para el análisis: carga la skill y deniega todo lo
+    que escriba; solo permite lecturas de diagnóstico."""
+    bash = {f"{c} *": "allow" for c in _CRASH_RO_CMDS}
+    bash["*"] = "deny"
+    data = {
+        "$schema": "https://opencode.ai/config.json",
+        "skills": {"paths": [str(APP_SKILLS_DIR)]},
+        "permission": {
+            "edit": "deny",
+            "bash": bash,
+            "webfetch": "deny",
+            "external_directory": {"*": "allow"},
+        },
+    }
+    try:
+        _private_dir(ICON_DIR)
+        CRASH_CONFIG.write_text(json.dumps(data, indent=2))
+        CRASH_CONFIG.chmod(0o600)
+        return str(CRASH_CONFIG)
+    except OSError as e:
+        log("no se pudo escribir la config de crash:", e)
+        return None

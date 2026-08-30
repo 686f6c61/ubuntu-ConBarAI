@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+"""oc-crash-run: analiza con IA un crash del sistema ya detectado (ConBarAI).
+
+Lo lanza oc-crash-watch (desacoplado) cuando aparece un crash y `crash_analyze`
+está activo. Ejecuta un `opencode run` headless en la carpeta de ejecución del
+panel, donde la skill `ubuntu-operator` está sembrada como skill de proyecto,
+con una config de permisos de SOLO LECTURA. Escribe un informe y notifica.
+
+No interrumpe nada: es un proceso/sesión aparte del OpenCode interactivo.
+Filosofía Omarchy: diagnosticar, no tocar.
+
+Uso (normalmente invocado por el watcher):
+  oc-crash-run --pack RUTA [--program P] [--kind K] [--pid N] [--once]
+"""
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+import warnings
+from datetime import datetime
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+import oc_common as OC
+
+SELF = "oc-crash-run"
+
+PROMPT = """Se ha detectado un crash en este equipo Ubuntu y quiero saber por qué.
+
+Hechos recogidos por ConBarAI desde el journal del kernel:
+- tipo: {kind}
+- programa: {program}
+- pid: {pid}
+
+Evidencia:
+```
+{evidence}
+```
+
+Usa la skill `ubuntu-operator` (sección de *crash forensics* de Ubuntu):
+evidencia primero, contrasta `journalctl -k` y, si aporta, `/var/crash` y
+`coredumpctl`; descarta agotamiento de recursos (OOM) antes de culpar al
+programa; correlaciona la marca temporal con mtimes y actualizaciones
+recientes. DIAGNÓSTICO SOLO: no modifiques nada del sistema.
+
+Devuelve el informe en ESPAÑOL con exactamente este formato:
+1. Qué pasó — una frase (qué murió, cuándo, señal/evento).
+2. Evidencia — las líneas textuales relevantes (tacha secretos).
+3. Causa probable — ranking; di qué está PROBADO y qué es INFERIDO.
+4. Arreglo — opciones de la más segura a la más invasiva, cada una con su reversión.
+5. Cómo evitarlo — el arreglo duradero (config, driver, límite o hardware).
+"""
+
+
+def strip_ansi(text):
+    return re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", text)
+
+
+def notify(title, body):
+    try:
+        subprocess.run(
+            ["notify-send", "--urgency", "critical", "--app-name", "ConBarAI",
+             title, body],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        OC.log("notify-send no disponible")
+
+
+def read_evidence(args, pack):
+    if pack and Path(pack).is_file():
+        text = Path(pack).read_text()
+        m = re.search(r"```(.+?)```", text, re.S)
+        if m:
+            return m.group(1).strip()
+        return text.strip()
+    return args.evidence or ""
+
+
+def run_analysis(args, pack):
+    evidence = read_evidence(args, pack)
+    prompt = PROMPT.format(
+        kind=args.kind or "desconocido",
+        program=args.program or "desconocido",
+        pid=args.pid or "n/d",
+        evidence=evidence or "(sin evidencia)",
+    )
+    cfg = OC.crash_config()
+    env = os.environ.copy()
+    if cfg:
+        env["OPENCODE_CONFIG"] = cfg
+    wd = OC.default_workdir()
+    try:
+        proc = subprocess.run(
+            ["opencode", "run", prompt],
+            cwd=wd,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=int(args.timeout),
+        )
+        report = strip_ansi(proc.stdout).strip()
+    except subprocess.TimeoutExpired:
+        report = "_El análisis superó el tiempo máximo. Revisa la evidencia a mano._"
+    except (OSError, FileNotFoundError) as e:
+        OC.log("no se pudo ejecutar opencode run:", e)
+        return None
+
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    prog = "".join(c if c.isalnum() or c in "-_." else "_" for c in (args.program or "crash"))[:40]
+    OC._private_dir(OC.CRASH_DIR)
+    rpath = OC.CRASH_DIR / f"{ts}-{prog}-report.md"
+    header = (
+        f"# Informe de crash · {args.program or '?'} ({args.kind or '?'})\n\n"
+        f"- Detectado: {ts}\n- PID: {args.pid or 'n/d'}\n\n---\n\n"
+    )
+    try:
+        rpath.write_text(header + report + "\n")
+        rpath.chmod(0o600)
+    except OSError as e:
+        OC.log("no se pudo escribir el informe:", e)
+    return rpath, report
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Analiza un crash con IA (ConBarAI).")
+    ap.add_argument("--pack", help="ruta al pack de evidencia del watcher")
+    ap.add_argument("--program")
+    ap.add_argument("--kind")
+    ap.add_argument("--pid")
+    ap.add_argument("--evidence", help="evidencia en bruto (si no hay --pack)")
+    ap.add_argument("--timeout", default=300, type=int)
+    args = ap.parse_args()
+
+    cfg = OC.load_settings()
+    if not cfg.get("crash_analyze", True):
+        return 0
+    if not OC.crash_config():
+        notify("Crash detectado", "ConBarAI: no se pudo preparar la config de análisis.")
+        return 1
+    out = run_analysis(args, args.pack)
+    if not out:
+        notify(f"No se pudo analizar el crash de {args.program or '?'}",
+               "ConBarAI: opencode no devolvió informe. Revisa el journal.")
+        return 2
+    rpath, report = out
+    summary = " ".join(
+        line.strip() for line in report.splitlines() if line.strip()
+    )[:180]
+    notify(f"Informe de crash: {args.program or '?'}", f"{summary}\n→ {rpath}")
+    print(f"[conbarai] informe escrito en {rpath}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

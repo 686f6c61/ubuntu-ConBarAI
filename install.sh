@@ -111,6 +111,7 @@ fi
 ln -sf "$DIR/oc-drop" "$BIN/oc-drop"
 ln -sf "$DIR/oc-tray" "$BIN/oc-tray"
 ln -sf "$DIR/oc-crash-watch" "$BIN/oc-crash-watch"
+ln -sf "$DIR/oc-crash-run" "$BIN/oc-crash-run"
 install -m 644 "$DIR/icons/oc-drop.svg" "$SHARE/icon.svg"
 
 # --- skills empaquetadas: copia canónica en la app; el panel la enlaza como

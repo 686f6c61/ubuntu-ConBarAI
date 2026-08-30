@@ -10,7 +10,7 @@ if command -v systemctl >/dev/null 2>&1; then
   rm -f "$HOME/.config/systemd/user/oc-crash-watch.service"
   systemctl --user daemon-reload >/dev/null 2>&1 || true
 fi
-rm -f "$HOME/.local/bin/oc-drop" "$HOME/.local/bin/oc-tray" "$HOME/.local/bin/oc-crash-watch"
+rm -f "$HOME/.local/bin/oc-drop" "$HOME/.local/bin/oc-tray" "$HOME/.local/bin/oc-crash-watch" "$HOME/.local/bin/oc-crash-run"
 rm -rf "$HOME/.local/share/oc-drop" "$HOME/.config/oc-drop" "$HOME/.local/state/oc-drop"
 rm -f "$HOME/.config/autostart/oc-tray.desktop"
 

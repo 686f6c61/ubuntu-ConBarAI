@@ -14,6 +14,8 @@ Fase 2. Uso:
   oc-crash-watch --once     una pasada y sale (para probar)
 """
 
+import os
+import subprocess
 import sys
 import time
 import warnings
@@ -70,6 +72,23 @@ def write_pack(ev):
         return None
 
 
+def spawn_analyze(pack_path, ev):
+    """Lanza oc-crash-run desacoplado (no bloquea el bucle del watcher)."""
+    runner = Path(__file__).resolve().parent / "oc-crash-run"
+    if not runner.is_file():
+        runner = OC.HOME / ".local/bin/oc-crash-run"
+    args = [sys.executable, str(runner), "--pack", str(pack_path),
+            "--program", ev["program"], "--kind", ev["kind"], "--pid", ev["pid"]]
+    try:
+        subprocess.Popen(
+            args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL, start_new_session=True,
+            env=os.environ.copy(),
+        )
+    except OSError as e:
+        OC.log("no se pudo lanzar el análisis:", e)
+
+
 def poll(state, cfg, seen):
     """Una pasada de vigilancia. Devuelve nº de eventos notificados."""
     cur = OC.boot_id()
@@ -107,6 +126,8 @@ def poll(state, cfg, seen):
             + (f" (PID {ev['pid']})" if ev["pid"] else "")
             + (f"\nEvidencia: {path}" if path else ""),
         )
+        if cfg.get("crash_analyze", True) and path:
+            spawn_analyze(path, ev)
         seen[prog] = now
         fired += 1
 
