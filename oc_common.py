@@ -35,6 +35,9 @@ DEFAULTS = {
     "theme": "tokyo-night",
     "font": "auto",
     "font_size": 10,
+    "crash_watch": True,
+    "crash_dedupe": 60,
+    "crash_poll": 8,
 }
 
 AUTOSTART_TEMPLATE = """[Desktop Entry]
@@ -484,3 +487,149 @@ def detect_font(settings=None):
     if "jetbrains mono" in out:
         return "JetBrains Mono"
     return "DejaVu Sans Mono"
+
+
+# ---------- detección de crashes del sistema (Ubuntu / journald) ----------
+#
+# El usuario está en el grupo `adm`, así que puede leer el journal del kernel
+# sin sudo. Detectamos por `journalctl -k` (no por /var/crash, que apport deja
+# root:whoopsie 0640 y no se lee sin privilegios).
+
+CRASH_DIR = STATE_DIR / "crash"
+CRASH_STATE = CRASH_DIR / "watch.json"
+CRASH_IGNORE_DIR = CRASH_DIR / "ignore"
+
+# Señales de crash en el journal del kernel -> (tipo, regex).
+_CRASH_PATTERNS = [
+    ("oom", re.compile(r"Killed process (\d+) \(([^)]+)\)")),
+    (
+        "segfault",
+        re.compile(
+            r"\b([A-Za-z0-9_.+\-]{1,64})\[(\d+)\]: "
+            r"(segfault|general protection fault|traps:|int3|Code: [0-9a-f])"
+        ),
+    ),
+    ("gpu", re.compile(r"(NVRM:.*Xid|drm.*(?:reset|hang)|amdgpu.*reset)")),
+    (
+        "hung",
+        re.compile(r"task:([A-Za-z0-9_.+\-]{1,64}).*blocked for more than"),
+    ),
+]
+
+# Nada de announcear nuestra propia maquinaria; opencode SÍ es una víctima
+# reportable (puede caer y querer saber por qué).
+_SELF_TOOLS = ("oc-drop", "oc-tray", "oc-crash-watch", "oc-crash-run")
+
+
+def is_own_tool(name):
+    return str(name or "").split("/")[-1] in _SELF_TOOLS
+
+
+def parse_journal_crash_line(line):
+    """Devuelve dict(kind, program, pid, raw) o None si no es un crash."""
+    for kind, rx in _CRASH_PATTERNS:
+        m = rx.search(line)
+        if not m:
+            continue
+        g = m.groups()
+        if kind == "oom":
+            pid, program = g[0], g[1]
+        elif kind == "hung":
+            pid, program = "", g[0]
+        elif kind == "segfault":
+            program, pid = g[0], g[1]
+        else:  # gpu: sin programa concreto
+            pid, program = "", "kernel/gpu"
+        return {"kind": kind, "program": program, "pid": pid, "raw": line.rstrip()}
+    return None
+
+
+def parse_journal_crash(text):
+    events = []
+    for line in text.splitlines():
+        ev = parse_journal_crash_line(line)
+        if ev and not is_own_tool(ev["program"]):
+            events.append(ev)
+    return events
+
+
+def boot_id():
+    try:
+        return Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+    except OSError:
+        return ""
+
+
+def load_crash_state():
+    try:
+        return json.loads(CRASH_STATE.read_text())
+    except (OSError, ValueError):
+        return {"boot_id": "", "watermark": ""}
+
+
+def save_crash_state(state):
+    try:
+        _private_dir(CRASH_DIR)
+        _private_dir(CRASH_IGNORE_DIR)
+        CRASH_STATE.write_text(json.dumps(state))
+        CRASH_STATE.chmod(0o600)
+        return True
+    except OSError as e:
+        log("estado de crashes no guardado:", e)
+        return False
+
+
+def crash_muted(program):
+    try:
+        safe = re.sub(r"[^A-Za-z0-9_.+-]", "_", str(program))[:64] or "unknown"
+        return (CRASH_IGNORE_DIR / safe).exists()
+    except OSError:
+        return False
+
+
+def crash_mute(program, on=True):
+    safe = re.sub(r"[^A-Za-z0-9_.+-]", "_", str(program))[:64] or "unknown"
+    _private_dir(CRASH_DIR)
+    _private_dir(CRASH_IGNORE_DIR)
+    flag = CRASH_IGNORE_DIR / safe
+    try:
+        if on:
+            flag.write_text("")
+            flag.chmod(0o600)
+        elif flag.exists():
+            flag.unlink()
+        return True
+    except OSError:
+        return False
+
+
+def crash_muted_list():
+    try:
+        return (
+            sorted(p.name for p in CRASH_IGNORE_DIR.iterdir()) if CRASH_IGNORE_DIR.is_dir() else []
+        )
+    except OSError:
+        return []
+
+
+def journal_since(kernel_only, watermark, extra_args=()):
+    """journalctl --since <watermark> (vacío = desde arranque) como texto."""
+    args = ["journalctl", "--no-pager", "-o", "short-iso"]
+    if kernel_only:
+        args.append("-k")
+    if watermark:
+        args += ["--since", watermark]
+    else:
+        args += ["-b"]
+    args += list(extra_args)
+    try:
+        return subprocess.check_output(args, text=True, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError) as e:
+        log("journalctl falló:", e)
+        return ""
+
+
+def detect_new_crashes(watermark):
+    """Crashes del kernel/journal posteriores a `watermark`."""
+    text = journal_since(True, watermark)
+    return parse_journal_crash(text)

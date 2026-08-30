@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+"""oc-crash-watch: detecta crashes del sistema Ubuntu y avisa (ConBarAI).
+
+Vigila el journal del kernel (el usuario está en `adm`, sin sudo) buscando
+segfaults, OOM-kills, resets de GPU y tareas colgadas; también detecta que el
+equipo se reinició (posible panic). Por cada crash nuevo manda una notificación
+de escritorio y guarda la evidencia en ~/.local/state/oc-drop/crash/.
+
+El análisis con IA y la segunda terminal del panel llegan en fases siguientes;
+esta pieza se limita a DETECTAR y registrar, sin tocar nada del sistema.
+
+Fase 2. Uso:
+  oc-crash-watch            bucle de vigilancia (lo lanza el servicio systemd)
+  oc-crash-watch --once     una pasada y sale (para probar)
+"""
+
+import sys
+import time
+import warnings
+from datetime import datetime, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+import oc_common as OC
+
+SELF = "oc-crash-watch"
+
+
+def now_iso():
+    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+
+
+def notify(title, body):
+    try:
+        import subprocess
+
+        subprocess.run(
+            ["notify-send", "--urgency", "critical", "--app-name", "ConBarAI",
+             title, body],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        OC.log("notify-send no disponible")
+
+
+def write_pack(ev):
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    prog = "".join(c if c.isalnum() or c in "-_." else "_" for c in ev["program"])[:40]
+    path = OC.CRASH_DIR / f"{ts}-{prog}-{ev['kind']}.md"
+    try:
+        OC._private_dir(OC.CRASH_DIR)
+        text = (
+            f"# Crash detectado · {ev['kind']}\n\n"
+            f"- Programa: `{ev['program']}`\n"
+            f"- PID: {ev['pid'] or 'n/d'}\n"
+            f"- Detectado: {ts}\n\n"
+            f"## Evidencia (journal del kernel)\n\n```\n{ev['raw']}\n```\n\n"
+            "> Informe automático de ConBarAI (detección). El análisis con IA\n"
+            "> y las opciones de arreglo se añaden en la 1.3.0.\n"
+        )
+        path.write_text(text)
+        path.chmod(0o600)
+        return path
+    except OSError as e:
+        OC.log("no se pudo escribir el pack:", e)
+        return None
+
+
+def poll(state, cfg, seen):
+    """Una pasada de vigilancia. Devuelve nº de eventos notificados."""
+    cur = OC.boot_id()
+
+    # Reinicio: el arranque anterior terminó sin cerrar nuestro watcher.
+    if state.get("boot_id") and cur and cur != state["boot_id"]:
+        prev = OC.journal_since(True, "", extra_args=["-b", "-1"])
+        events = OC.parse_journal_crash(prev)[-1:]
+        label = events[0]["program"] if events else "desconocido"
+        notify("El equipo se reinició",
+               f"ConBarAI: posible panic/cierre del arranque anterior "
+               f"(último fallo: {label}). Revisa el journal.")
+        state["boot_id"] = cur
+        state["watermark"] = now_iso()
+        return 1
+
+    if cur:
+        state["boot_id"] = cur
+
+    wm = state.get("watermark") or now_iso()
+    events = OC.detect_new_crashes(wm)
+    now = time.monotonic()
+    window = int(cfg.get("crash_dedupe", 60) or 60)
+    fired = 0
+    for ev in events:
+        prog = ev["program"]
+        if OC.crash_muted(prog):
+            continue
+        if now - seen.get(prog, 0) < window:
+            continue
+        path = write_pack(ev)
+        notify(
+            f"Proceso caído: {prog}",
+            f"ConBarAI · {ev['kind']}"
+            + (f" (PID {ev['pid']})" if ev["pid"] else "")
+            + (f"\nEvidencia: {path}" if path else ""),
+        )
+        seen[prog] = now
+        fired += 1
+
+    state["watermark"] = now_iso()
+    return fired
+
+
+def main():
+    once = "--once" in sys.argv[1:]
+    cfg = OC.load_settings()
+    state = OC.load_crash_state()
+    if not state.get("boot_id"):
+        # Primera vez: fijar base sin anunciar el historial.
+        state["boot_id"] = OC.boot_id()
+        state["watermark"] = now_iso()
+        OC.save_crash_state(state)
+    seen = {}
+
+    if once:
+        n = poll(state, cfg, seen)
+        OC.save_crash_state(state)
+        print(f"[conbarai] oc-crash-watch --once: {n} evento(s) notificado(s)")
+        return 0
+
+    while True:
+        cfg = OC.load_settings()
+        if cfg.get("crash_watch", True):
+            try:
+                poll(state, cfg, seen)
+            except Exception as e:
+                OC.log("poll de crashes falló:", e)
+        else:
+            state["watermark"] = now_iso()  # no inundar al reactivar
+        OC.save_crash_state(state)
+        time.sleep(max(3, int(cfg.get("crash_poll", 8) or 8)))
+
+
+if __name__ == "__main__":
+    main()

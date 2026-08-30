@@ -209,3 +209,51 @@ def test_ensure_project_skill_sin_canonica_no_crea(fake_home, tmp_path, monkeypa
     work = fake_home / "Documentos/ConBarAI"
     assert OC.ensure_project_skill(str(work)) is False
     assert not (work / ".opencode").exists()
+
+
+# ---------- deteccion de crashes ----------
+
+
+def test_parse_line_oom():
+    ev = OC.parse_journal_crash_line(
+        "kernel: Out of memory: Killed process 4242 (firefox) total-vm:1"
+    )
+    assert ev == {
+        "kind": "oom",
+        "program": "firefox",
+        "pid": "4242",
+        "raw": "kernel: Out of memory: Killed process 4242 (firefox) total-vm:1",
+    }
+
+
+def test_parse_line_segfault():
+    ev = OC.parse_journal_crash_line("host kernel: gimp[3001]: segfault at 0 ip 0x0")
+    assert ev is not None
+    assert ev["kind"] == "segfault" and ev["program"] == "gimp" and ev["pid"] == "3001"
+
+
+def test_parse_line_no_crash():
+    assert OC.parse_journal_crash_line("kernel: usb 1-1: new high-speed device") is None
+
+
+def test_parse_block_filtra_maquinaria_propia():
+    sample = (
+        "kernel: gimp[1]: segfault at 0\n"
+        "kernel: oc-drop[9]: segfault at 0\n"
+        "kernel: Out of memory: Killed process 5 (xterm)\n"
+    )
+    progs = {e["program"] for e in OC.parse_journal_crash(sample)}
+    assert progs == {"gimp", "xterm"}
+    assert "oc-drop" not in progs
+
+
+def test_crash_mute_roundtrip(tmp_path, monkeypatch):
+    ignore = tmp_path / "ignore"
+    ignore.mkdir(parents=True)
+    monkeypatch.setattr(OC, "CRASH_IGNORE_DIR", ignore)
+    assert OC.crash_muted("firefox") is False
+    assert OC.crash_mute("firefox", True) is True
+    assert OC.crash_muted("firefox") is True
+    assert "firefox" in OC.crash_muted_list()
+    assert OC.crash_mute("firefox", False) is True
+    assert OC.crash_muted("firefox") is False

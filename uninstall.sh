@@ -3,7 +3,14 @@
 set -uo pipefail
 
 pkill -f "oc-dr[o]p" 2>/dev/null
-rm -f "$HOME/.local/bin/oc-drop" "$HOME/.local/bin/oc-tray"
+pkill -f "oc-crash-wat[c]h" 2>/dev/null
+# Detira el servicio de usuario antes de borrar sus ficheros
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl --user disable --now oc-crash-watch.service >/dev/null 2>&1 || true
+  rm -f "$HOME/.config/systemd/user/oc-crash-watch.service"
+  systemctl --user daemon-reload >/dev/null 2>&1 || true
+fi
+rm -f "$HOME/.local/bin/oc-drop" "$HOME/.local/bin/oc-tray" "$HOME/.local/bin/oc-crash-watch"
 rm -rf "$HOME/.local/share/oc-drop" "$HOME/.config/oc-drop" "$HOME/.local/state/oc-drop"
 rm -f "$HOME/.config/autostart/oc-tray.desktop"
 

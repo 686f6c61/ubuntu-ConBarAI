@@ -110,6 +110,7 @@ fi
 # --- enlaces, icono y entradas de escritorio ---
 ln -sf "$DIR/oc-drop" "$BIN/oc-drop"
 ln -sf "$DIR/oc-tray" "$BIN/oc-tray"
+ln -sf "$DIR/oc-crash-watch" "$BIN/oc-crash-watch"
 install -m 644 "$DIR/icons/oc-drop.svg" "$SHARE/icon.svg"
 
 # --- skills empaquetadas: copia canónica en la app; el panel la enlaza como
@@ -157,10 +158,27 @@ else
   rm -f "$AUTOSTART/oc-tray.desktop"
 fi
 
+# --- watcher de crashes: servicio de usuario (solo avisa; se activa al entrar
+#     en la sesión gráfica). El binario respeta el ajuste `crash_watch`. ---
+UNIT_DIR="$HOME/.config/systemd/user"
+mkdir -p "$UNIT_DIR"
+if command -v systemctl >/dev/null 2>&1; then
+  install -m 644 "$DIR/systemd/oc-crash-watch.service" "$UNIT_DIR/oc-crash-watch.service"
+  systemctl --user daemon-reload >/dev/null 2>&1 || true
+  if python3 -c "import json,sys; sys.exit(0 if json.load(open('$CONFIG/settings.json')).get('crash_watch', True) else 1)"; then
+    systemctl --user enable --now oc-crash-watch.service >/dev/null 2>&1 || true
+    echo "[i] Vigía de crashes ACTIVO: systemctl --user status oc-crash-watch"
+  else
+    systemctl --user disable --now oc-crash-watch.service >/dev/null 2>&1 || true
+    echo "[i] Vigía de crashes en pausa (crash_watch=false)."
+  fi
+fi
+
 update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
 
 echo "[OK] ConBarAI instalado"
 echo "     Panel:      $BIN/oc-drop  (atajo según settings.json, por defecto Super+Intro)"
 echo "     Tray:       $BIN/oc-tray  (arranca al iniciar sesión y registra el atajo)"
+echo "     Crash-watch: $BIN/oc-crash-watch  (avisa de crashes del sistema)"
 echo "     Terminal:   $TERMINAL (opción 'Terminal del sistema' del tray)"
 echo "     Ajustes:    $CONFIG/settings.json"
