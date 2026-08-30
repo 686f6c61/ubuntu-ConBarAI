@@ -3,6 +3,16 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Añadido
+
+- **Web del producto** en `docs/` (GitHub Pages): una página con la misma
+  estética de consola que la ayuda `conbarai(1)` — Tokyo Night, JetBrains
+  Mono, tarjetas terminal, banner ASCII — con el porqué, el panel, el
+  flujo de crashes con un informe real, el menú, la instalación y todos
+  los ajustes.
+
 ## [1.4.0] - 2026-08-30
 
 ### Corregido
