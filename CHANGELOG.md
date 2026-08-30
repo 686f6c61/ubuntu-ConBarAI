@@ -3,6 +3,37 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.3.0] - 2026-08-30
+
+### Añadido
+
+- **Skill solo para este sistema**: `ubuntu-operator` se versiona en el repo y
+  se instala como skill de proyecto (`ensure_project_skill`) únicamente en la
+  carpeta de ejecución del panel, así que solo la carga ESE OpenCode. Se retiró
+  la copia global de `~/.agents/skills` (ya no contamina tu opencode normal).
+- **Vigía de crashes del sistema** (`oc-crash-watch` + servicio de usuario
+  systemd): detecta segfaults, OOM-kills, resets de GPU, tareas colgadas y
+  reinicios leyendo el journal del kernel (sin sudo; el usuario está en `adm`).
+  Dedupe por programa, mute individual y aviso de escritorio. Guarda la
+  evidencia en `~/.local/state/oc-drop/crash/`.
+- **Análisis con IA headless** (`oc-crash-run`): lanza un `opencode run` en la
+  carpeta del panel (con la skill cargada) usando una config de permisos de
+  SOLO LECTURA, y produce un informe en español (qué pasó / evidencia / causa
+  probada vs inferida / arreglo con reversión / cómo evitarlo). No modifica el
+  sistema.
+- **Segunda terminal de diagnóstico**: el panel ahora es un `Gtk.Paned`; si
+  aparece un informe nuevo mientras el panel está visible, se abre una consola
+  debajo mostrando el crash y dejando una shell para investigar, sin tocar la
+  sesión de arriba ni interrumpir al agente. Cerrable con su botón o `Ctrl-D`.
+- Nuevos ajustes: `crash_watch`, `crash_analyze`, `crash_dedupe`, `crash_poll`.
+
+### Notas
+
+- Adaptado a la realidad de Ubuntu: aquí los cores los captura **apport**, no
+  systemd-coredump (no hay `coredumpctl`), por eso la detección va por journald
+  y el análisis contrasta también `/var/crash`. Sigue el patrón `diagnose-crash`
+  de Omarchy (evidencia primero, diagnosticar sin tocar, no inventar símbolos).
+
 ## [1.2.0] - 2026-08-30
 
 ### Corregido
@@ -106,6 +137,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.3.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.3.0
 [1.2.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.2.0
 [1.0.2]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.0.2
 [1.0.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.0.1
