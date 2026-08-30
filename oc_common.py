@@ -15,6 +15,8 @@ STATE_DIR = HOME / ".local/state/oc-drop"
 ALERTS_DIR = STATE_DIR / "alerts"
 SESSIONS_FILE = STATE_DIR / "sessions.json"
 ICON_DIR = HOME / ".local/share/oc-drop"
+APP_SKILLS_DIR = ICON_DIR / "skills"  # copia canónica instalada por install.sh
+BUNDLED_SKILL = "ubuntu-operator"
 OPENCODE_DB = HOME / ".local/share/opencode/opencode.db"
 AUTOSTART_FILE = HOME / ".config/autostart/oc-tray.desktop"
 DESKTOP_FILE = HOME / ".local/share/applications/conbarai.desktop"
@@ -270,6 +272,29 @@ def session_for_workdir(workdir):
     if os.path.realpath(str(workdir)) == os.path.realpath(default_workdir()):
         return DEFAULT_SESSION
     return f"{DEFAULT_SESSION}-{slug(os.path.basename(str(workdir).rstrip('/')))}"
+
+
+def ensure_project_skill(workdir, skill=BUNDLED_SKILL):
+    """Enlaza la skill canónica de la app en <workdir>/.opencode/skills/<skill>/
+    para que SOLO el OpenCode que arranca en ese workdir la cargue (skill de
+    proyecto). Fuera de esa carpeta, ningún otro OpenCode la ve."""
+    src = APP_SKILLS_DIR / skill / "SKILL.md"
+    if not src.is_file():
+        return False
+    dst_dir = Path(workdir) / ".opencode" / "skills" / skill
+    try:
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        dst = dst_dir / "SKILL.md"
+        if dst.is_symlink():
+            if os.path.realpath(dst) != os.path.realpath(src):
+                dst.unlink()
+                dst.symlink_to(src)
+        elif not dst.exists():
+            dst.symlink_to(src)
+        return True
+    except OSError as e:
+        log("skill no sembrada en workdir:", e)
+        return False
 
 
 # ---------- tmux ----------

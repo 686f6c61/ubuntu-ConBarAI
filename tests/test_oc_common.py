@@ -185,3 +185,27 @@ def test_set_autostart_crea_y_retira(fake_home, monkeypatch):
     assert not OC.set_autostart(False)
     assert not OC.autostart_enabled()
     assert not autostart.exists()
+
+
+# ---------- ensure_project_skill ----------
+
+
+def test_ensure_project_skill_siembra_enlace(fake_home, tmp_path, monkeypatch):
+    canon = tmp_path / "appskills" / "ubuntu-operator"
+    canon.mkdir(parents=True)
+    (canon / "SKILL.md").write_text("---\nname: ubuntu-operator\n---\nx\n")
+    monkeypatch.setattr(OC, "APP_SKILLS_DIR", tmp_path / "appskills")
+    work = fake_home / "Documentos/ConBarAI"
+    assert OC.ensure_project_skill(str(work)) is True
+    dst = work / ".opencode/skills/ubuntu-operator/SKILL.md"
+    assert dst.is_symlink()
+    assert dst.resolve() == (canon / "SKILL.md").resolve()
+    # idempotente: no falla al repetir
+    assert OC.ensure_project_skill(str(work)) is True
+
+
+def test_ensure_project_skill_sin_canonica_no_crea(fake_home, tmp_path, monkeypatch):
+    monkeypatch.setattr(OC, "APP_SKILLS_DIR", tmp_path / "vacio")
+    work = fake_home / "Documentos/ConBarAI"
+    assert OC.ensure_project_skill(str(work)) is False
+    assert not (work / ".opencode").exists()

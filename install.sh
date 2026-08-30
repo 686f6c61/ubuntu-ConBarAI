@@ -111,6 +111,15 @@ fi
 ln -sf "$DIR/oc-drop" "$BIN/oc-drop"
 ln -sf "$DIR/oc-tray" "$BIN/oc-tray"
 install -m 644 "$DIR/icons/oc-drop.svg" "$SHARE/icon.svg"
+
+# --- skills empaquetadas: copia canónica en la app; el panel la enlaza como
+#     skill de proyecto en su workdir, así solo la carga ESE OpenCode ---
+if [ -d "$DIR/skills" ]; then
+  rm -rf "$SHARE/skills"
+  cp -r "$DIR/skills" "$SHARE/skills"
+  echo "[i] Skills instaladas en $SHARE/skills: $(ls "$SHARE/skills" | tr '\n' ' ')"
+fi
+
 mkdir -p "$HOME/.local/share/applications"
 sed "s|__HOME__|$HOME|g" "$DIR/applications/conbarai.desktop" \
   > "$HOME/.local/share/applications/conbarai.desktop"

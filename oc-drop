@@ -374,6 +374,7 @@ class DropWindow(Gtk.ApplicationWindow):
     def spawn(self):
         OC.record_session(self.session, self.workdir)
         OC.ensure_hooks(self.session)
+        OC.ensure_project_skill(self.workdir)
         env = os.environ.copy()
         env.setdefault("TERM", "xterm-256color")
         env_list = [f"{k}={v}" for k, v in env.items()]
