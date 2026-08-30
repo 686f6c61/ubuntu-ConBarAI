@@ -1,6 +1,13 @@
 # ConBarAI
 
-Panel flotante estilo Omarchy con **OpenCode** para Ubuntu GNOME.
+<sub>⚠️ **Proyecto experimental**: esto no busca reemplazar la terminal de
+OpenCode, sino darle una puerta de entrada rápida — un panel flotante
+siempre a mano en cualquier escritorio, sin abrir una ventana nueva ni
+perder el flujo. Está en desarrollo y puede cambiar o romperse sin previo
+aviso.</sub>
+
+Panel flotante estilo Omarchy con **OpenCode** para GNOME y escritorios
+Linux (probado en Ubuntu GNOME).
 
 ![Panel de ConBarAI](screenshots/captura-01.png)
 ![Panel de ConBarAI](screenshots/captura-02.png)
@@ -36,7 +43,7 @@ sigue trabajando en segundo plano.
 
 ## Requisitos
 
-- Ubuntu con GNOME (probado en GNOME 50, Wayland; la ventana usa XWayland)
+- GNOME en Wayland (probado en GNOME 50 / Ubuntu; la ventana usa XWayland)
 - `python3-gi` + `gir1.2-vte-2.91` + `gir1.2-ayatanaappindicator3-0.1`
 - `wmctrl`, `xdotool`, `tmux`
 - `opencode` en el PATH
@@ -156,7 +163,7 @@ ConBarAI/
 
 ## Changelog
 
-Historial de cambios en [CHANGELOG.md](CHANGELOG.md). Versión actual: **1.0.0**.
+Historial de cambios en [CHANGELOG.md](CHANGELOG.md). Versión actual: **1.0.2**.
 
 ## Licencia
 
