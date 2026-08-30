@@ -23,6 +23,21 @@ DESKTOP_FILE = HOME / ".local/share/applications/conbarai.desktop"
 
 DEFAULT_SESSION = "oc"
 
+REPO_URL = "https://github.com/686f6c61/ubuntu-ConBarAI"
+
+
+def app_version():
+    """Versión instalada, leída del pyproject.toml que acompaña al código
+    (la instalación enlaza los binarios al repo, así que viaja junto)."""
+    try:
+        text = (Path(__file__).resolve().parent / "pyproject.toml").read_text()
+        m = re.search(r'^version\s*=\s*"([^"]+)"', text, re.M)
+        if m:
+            return m.group(1)
+    except OSError:
+        pass
+    return ""
+
 DEFAULTS = {
     "autohide": True,
     "autostart": True,
@@ -39,6 +54,10 @@ DEFAULTS = {
     "crash_dedupe": 60,
     "crash_poll": 8,
     "crash_analyze": True,
+    "diag_pos": "side",  # "side" = al lado del panel; "below" = debajo
+    # True: opencode arranca con -c (continúa la última sesión, p. ej. tras
+    # un reinicio); False: siempre empieza sin contexto arrastrado
+    "continue_session": True,
 }
 
 AUTOSTART_TEMPLATE = """[Desktop Entry]
@@ -634,6 +653,101 @@ def detect_new_crashes(watermark):
     """Crashes del kernel/journal posteriores a `watermark`."""
     text = journal_since(True, watermark)
     return parse_journal_crash(text)
+
+
+CRASH_PENDING = CRASH_DIR / "pending.json"
+
+# Recetas (prompt) para el agente, en español, formato Omarchy.
+CRASH_PROMPT = """Se ha detectado un crash en este equipo Ubuntu y quiero saber por qué.
+
+Hechos recogidos por ConBarAI desde el journal del kernel:
+- tipo: {kind}
+- programa: {program}
+- pid: {pid}
+
+Evidencia:
+```
+{evidence}
+```
+
+Usa la skill `ubuntu-operator` (sección de *crash forensics* de Ubuntu):
+evidencia primero, contrasta `journalctl -k` y, si aporta, `/var/crash`.
+DIAGNÓSTICO SOLO: no modifiques nada. Sé breve: como mucho 3 o 4 comandos de
+lectura; si con la evidencia ya está claro, respóndeme sin ejecutar nada.
+
+Devuelve el informe en ESPAÑOL, corto, con este formato:
+1. Qué pasó — una frase (qué murió, cuándo, señal/evento).
+2. Evidencia — solo las líneas clave (tacha secretos).
+3. Causa probable — 1-3 frases; di qué es PROBADO y qué INFERIDO.
+4. Arreglo — hasta 2 opciones (más segura primero) con su reversión.
+5. Cómo evitarlo — una línea."""
+
+
+def crash_prompt(ev):
+    return CRASH_PROMPT.format(
+        kind=ev.get("kind", "desconocido"),
+        program=ev.get("program", "desconocido"),
+        pid=ev.get("pid") or "n/d",
+        evidence=(ev.get("raw") or "(sin evidencia)").strip(),
+    )
+
+
+def write_crash_pending(ev):
+    """Deja una petición para que un panel visible lance al agente en directo."""
+    try:
+        _private_dir(CRASH_DIR)
+        CRASH_PENDING.write_text(
+            json.dumps(
+                {
+                    "program": ev.get("program"),
+                    "kind": ev.get("kind"),
+                    "pid": ev.get("pid"),
+                    "raw": ev.get("raw"),
+                    "ts": time.time(),
+                }
+            )
+        )
+        CRASH_PENDING.chmod(0o600)
+        return True
+    except OSError as e:
+        log("no se pudo dejar la petición de análisis:", e)
+        return False
+
+
+def take_crash_pending(seen_ts):
+    """Devuelve la petición si es más nueva que `seen_ts`; no la borra."""
+    try:
+        data = json.loads(CRASH_PENDING.read_text())
+    except (OSError, ValueError):
+        return None, seen_ts
+    ts = float(data.get("ts", 0))
+    if ts > seen_ts:
+        return data, ts
+    return None, seen_ts
+
+
+def clear_crash_pending():
+    try:
+        if CRASH_PENDING.exists():
+            CRASH_PENDING.unlink()
+    except OSError:
+        pass
+
+
+def take_stale_pending(max_age_s):
+    """Petición que ningún panel visible recogió en `max_age_s`: la consume
+    y la devuelve para que el vigía la analice en headless. None si no hay
+    petición o aún es reciente (un panel visible puede estar a punto de
+    recogerla)."""
+    try:
+        data = json.loads(CRASH_PENDING.read_text())
+        ts = float(data.get("ts", 0))
+    except (OSError, ValueError, TypeError):
+        return None
+    if time.time() - ts < max_age_s:
+        return None
+    clear_crash_pending()
+    return data
 
 
 CRASH_CONFIG = ICON_DIR / "conbarai-crash.json"

@@ -23,7 +23,7 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("AyatanaAppIndicator3", "0.1")
-from gi.repository import AyatanaAppIndicator3, GLib, Gtk  # noqa: E402
+from gi.repository import AyatanaAppIndicator3, Gdk, GLib, Gtk  # noqa: E402
 
 import oc_common as OC  # noqa: E402
 
@@ -48,6 +48,30 @@ def icon_item(label, icons):
     theme = Gtk.IconTheme.get_default()
     name = next((n for n in icons if theme.has_icon(n)), "application-x-executable-symbolic")
     item.set_image(Gtk.Image.new_from_icon_name(name, Gtk.IconSize.MENU))
+    return item
+
+
+def check_item(label, active, callback):
+    """Opción activable con icono de casilla (los CheckMenuItem de GTK no
+    admiten imagen; el icono refleja el estado y el menú se reconstruye al
+    cambiar el ajuste)."""
+    icons = (
+        ["checkbox-checked-symbolic", "object-select-symbolic"]
+        if active else ["checkbox-symbolic", "window-close-symbolic"]
+    )
+    item = icon_item(label, icons)
+    item.connect("activate", callback)
+    return item
+
+
+def radio_item(label, active, callback):
+    """Opción excluyente con icono de radio (mismo criterio que check_item)."""
+    icons = (
+        ["radio-checked-symbolic", "object-select-symbolic"]
+        if active else ["radio-symbolic", "radio-mixed-symbolic"]
+    )
+    item = icon_item(label, icons)
+    item.connect("activate", callback)
     return item
 
 
@@ -131,6 +155,253 @@ def open_system_terminal():
     )
 
 
+def open_repo():
+    subprocess.Popen(
+        ["xdg-open", OC.REPO_URL],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+
+def open_folder(path):
+    subprocess.Popen(
+        ["xdg-open", str(path)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+
+HELP_TITLE = "ConBarAI · Ayuda"
+
+
+def help_markup(theme):
+    """Página de ayuda con estética de manual de consola, con los colores
+    del tema activo del panel."""
+    a = theme["accent"]
+    g = theme["green"]
+    y = theme["yellow"]
+    d = theme["fg_dim"]
+    r = theme["red"]
+    m = theme["palette"][5]
+    ver = OC.app_version() or "?"
+
+    def s(txt):
+        return f'<span weight="bold" foreground="{a}">{txt}</span>'
+
+    def k(txt):
+        return f'<span foreground="{y}">{txt}</span>'
+
+    def v(txt):
+        return f'<span foreground="{m}">{txt}</span>'
+
+    def c(txt):
+        return f'<span foreground="{g}">{txt}</span>'
+
+    def dim(txt):
+        return f'<span foreground="{d}">{txt}</span>'
+
+    return f"""{dim("conbarai(1)                  Manual del usuario                  conbarai(1)")}
+
+{s("NOMBRE")}
+    ConBarAI {dim("(Console Bar Artificial Intelligence)")} — OpenCode
+    integrado en la barra de Ubuntu: un agente de IA a un atajo de
+    teclado para el día a día, con vigía y forense de crashes.
+
+{s("SINOPSIS")}
+    {k("Súper+Intro")}                      abrir u ocultar el panel
+    {c("$ oc-drop")} [{k("--workdir")} RUTA]      panel de una carpeta concreta
+    {c("$ oc-drop --quit")}                 cerrar paneles (tmux sigue vivo)
+    {c("$ oc-crash-watch --once")}          una pasada de detección
+    {c("$ oc-crash-run --pack")} PACK.md    analizar una evidencia a mano
+
+{s("DESCRIPCIÓN")}
+    Pulsa el atajo y aparece un panel flotante bajo la barra de GNOME
+    con OpenCode dentro; vuelve a pulsar y se aparta. La sesión vive en
+    tmux: nada se pierde al ocultar o cerrar, y al reabrir (o tras
+    reiniciar el equipo) OpenCode retoma la conversación con {k("-c")}.
+
+    Pídele cosas del sistema: instalar programas, configurar servicios,
+    revisar logs, liberar disco... Lleva la skill {v("ubuntu-operator")}
+    con una regla fija: diagnosticar antes de tocar y saber deshacer
+    cada cambio.
+
+{s("EL PANEL")}
+    <span foreground="{g}">●</span> verde  sesión viva    <span foreground="{r}">●</span> rojo  sesión muerta
+    <span foreground="{y}">●</span> ámbar  OpenCode pide tu atención (además notifica)
+
+    La rueda gira mientras el agente trabaja; al lado, coste y tokens
+    acumulados de la carpeta. Botones: maximizar/restaurar, nueva
+    sesión {dim("(OpenCode de cero, sin -c)")} y ocultar.
+
+    {k("Ctrl+V")} pega    {k("Ctrl+C")} copia si hay selección {dim("(si no, interrumpe")}
+    {dim("al agente)")}    también {k("Ctrl+Mayús+C/V")}, {k("Mayús+Insert")} y clic derecho.
+    Arrastra archivos o carpetas: se insertan como rutas listas.
+
+{s("EL MENÚ DEL ICONO")}
+    {k("Abrir / ocultar OpenCode")}   lo mismo que el atajo de teclado
+    {k("Nueva sesión…")}              panel con sesión tmux propia por carpeta
+    {k("Carpeta de trabajo…")}        cambia la carpeta por defecto; el panel
+                               se reinicia y OpenCode trabaja desde ahí
+    {k("Terminal del sistema")}       tu terminal en la carpeta de trabajo
+    {k("Cerrar paneles")}             cierra ventanas; tmux y OpenCode viven
+    {k("Sesiones")}                   vuelve a cualquier sesión abierta
+    {k("Carpetas recientes")}         últimas 5 carpetas usadas
+    {k("Tamaño")}                     Pequeño · Mediano · Grande · Máximo
+    {k("Transparencia")}              Opaco · Suave · Fuerte
+    {k("Tema")}                       Tokyo Night · Catppuccin · Dracula ·
+                               Gruvbox
+    {k("Tecla de apertura")}          Súper+Intro · Súper+A · Sin atajo
+    {k("Diagnóstico de crashes")}     ver la sección siguiente
+    {k("Abrir continuando (-c)")}     marcada: retoma la conversación al
+                               arrancar; desmarcada: siempre de cero
+    {k("Ocultar al perder el foco")}  autohide del panel
+    {k("Arrancar al iniciar")}        autoarranque del icono
+    {k("Ayuda")}                      esta página {dim("(Esc para cerrar)")}
+    {k("ConBarAI " + ver)}              abre el repositorio del proyecto
+    {k("Salir")}                      cierra el icono de la barra
+
+{s("DIAGNÓSTICO DE CRASHES")}
+    1. El vigía {dim("(oc-crash-watch, servicio de usuario)")} lee el journal
+       del kernel: segfaults, OOM-kills, resets de GPU, tareas
+       colgadas y reinicios inesperados.
+    2. Notifica y guarda la evidencia.
+    3. Un agente con permisos de {v("SOLO LECTURA")} analiza y escribe el
+       informe en español: qué pasó · evidencia · causa probable
+       {dim("(probado vs inferido)")} · arreglo con reversión · cómo evitarlo.
+    4. Panel a la vista: análisis en directo en una consola al lado o
+       debajo {dim("(ajuste diag_pos)")}. Panel oculto: informe en segundo
+       plano y aviso al terminar.
+
+    En el submenú: posición de la consola, interruptores del vigía y
+    del análisis, y {k("Abrir carpeta de informes")}. Si un programa cae en
+    bucle, pide al agente silenciarlo {dim("(mute reversible por programa)")}.
+
+{s("AJUSTES")} {dim("~/.config/oc-drop/settings.json — el menú lo escribe por ti")}
+    {k("workdir")}           {v("ruta")}             carpeta de trabajo por defecto
+                                       {dim("(vacío = ~/Documentos/ConBarAI)")}
+    {k("width")}             {v("0.15-0.90")}        ancho del panel {dim("(fracción)")}
+    {k("height")}            {v("0.20-0.95")}        alto del panel {dim("(fracción)")}
+    {k("opacity")}           {v("0.50-1.00")}        opacidad del panel
+    {k("theme")}             {v("tokyo-night")} · {v("catppuccin")} · {v("dracula")} · {v("gruvbox")}
+    {k("font")}              {v("auto")} · familia   {dim("auto = JetBrains Mono Nerd")}
+    {k("font_size")}         {v("7-16")}             cuerpo de la tipografía
+    {k("keybinding")}        {v("&lt;Super&gt;Return")} · {v("&lt;Super&gt;a")} · {v('""')} {dim("(sin atajo)")}
+    {k("terminal")}          {v("auto")} · binario   {dim("auto = Ghostty si está")}
+    {k("autohide")}          {v("true")} · {v("false")}     ocultar al perder el foco
+    {k("autostart")}         {v("true")} · {v("false")}     tray al iniciar sesión
+    {k("continue_session")}  {v("true")} · {v("false")}     arrancar OpenCode con {k("-c")}
+    {k("recent_dirs")}       {v("lista")}            últimas carpetas {dim("(lo escribe")}
+                                       {dim("el tray)")}
+    {k("diag_pos")}          {v("side")} · {v("below")}     consola al lado o debajo
+    {k("crash_watch")}       {v("true")} · {v("false")}     vigía de crashes
+    {k("crash_analyze")}     {v("true")} · {v("false")}     análisis con IA
+    {k("crash_poll")}        {v("segundos")}         cadencia del vigía {dim("(def. 8)")}
+    {k("crash_dedupe")}      {v("segundos")}         dedupe por programa {dim("(def. 60)")}
+
+    Tamaño y transparencia se aplican al reabrir el panel.
+
+{s("ARCHIVOS")}
+    {c("~/.config/oc-drop/settings.json")}      ajustes
+    {c("~/.local/state/oc-drop/crash/")}        evidencias e informes
+    {c("~/.local/state/oc-drop/crash/ignore/")} programas silenciados
+    {c("~/.local/share/oc-drop/skills/")}       skill ubuntu-operator
+
+{s("FILOSOFÍA")}
+    Local, en tu espacio de usuario, sin sudo, y sin tocar nada del
+    sistema sin que lo pidas.
+
+{dim("ConBarAI " + ver + "                       MIT                       conbarai(1)")}"""
+
+
+class HelpWindow(Gtk.Window):
+    """Ayuda con estética de consola: página de manual monoespaciada con
+    los colores y la tipografía del tema activo del panel."""
+
+    def __init__(self):
+        super().__init__(title=HELP_TITLE)
+        self.set_default_size(760, 800)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        s = OC.load_settings()
+        theme = OC.THEMES.get(s["theme"], OC.THEMES["tokyo-night"])
+        fam = OC.detect_font(s)
+        css = Gtk.CssProvider()
+        css.load_from_data(f"""
+        .ayuda-fondo {{ background-color: {theme["bg"]}; }}
+        .ayuda-cabecera {{
+          background-color: {theme["bg_head"]};
+          border-bottom: 1px solid {theme["border"]};
+        }}
+        .ayuda-texto, .ayuda-cabecera label {{
+          color: {theme["fg"]};
+          font-family: "{fam}", monospace;
+          font-size: 13px;
+        }}
+        .ayuda-texto selection {{
+          background-color: {theme["accent"]};
+          color: {theme["bg"]};
+        }}
+        """.encode())
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(), css,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
+        self.get_style_context().add_class("ayuda-fondo")
+
+        raiz = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        cabecera = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        cabecera.get_style_context().add_class("ayuda-cabecera")
+        punto = Gtk.Label()
+        punto.set_markup(f'<span foreground="{theme["green"]}">●</span>')
+        titulo = Gtk.Label(label="conbarai(1) · manual de ConBarAI",
+                           xalign=0.0)
+        for w, izq in ((punto, 14), (titulo, 8)):
+            w.set_margin_top(9)
+            w.set_margin_bottom(9)
+            w.set_margin_start(izq)
+            cabecera.pack_start(w, False, False, 0)
+        raiz.pack_start(cabecera, False, False, 0)
+
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.get_style_context().add_class("ayuda-fondo")
+        label = Gtk.Label()
+        label.set_markup(help_markup(theme))
+        label.set_line_wrap(True)
+        label.set_xalign(0.0)
+        label.set_yalign(0.0)
+        label.set_selectable(True)
+        for setter in (
+            label.set_margin_top, label.set_margin_bottom,
+            label.set_margin_start, label.set_margin_end,
+        ):
+            setter(22)
+        label.get_style_context().add_class("ayuda-texto")
+        scroll.add(label)
+        viewport = label.get_parent()
+        if viewport is not None:
+            viewport.get_style_context().add_class("ayuda-fondo")
+        raiz.pack_start(scroll, True, True, 0)
+        self.add(raiz)
+        self._scroll = scroll
+        # la etiqueta seleccionable roba el foco y arrastra el scroll al
+        # final: la ayuda siempre abre por arriba
+        self.connect("map", lambda *_: GLib.idle_add(self._scroll_top))
+        self.connect("key-press-event", self._on_key)
+
+    def _scroll_top(self):
+        adj = self._scroll.get_vadjustment()
+        adj.set_value(adj.get_lower())
+        return False
+
+    def _on_key(self, _w, event):
+        if event.keyval == Gdk.KEY_Escape:
+            self.destroy()
+            return True
+        return False
+
+
 def write_icons():
     """Iconos del tray: normal, alerta y 4 fotogramas de 'trabajando'."""
     OC.ICON_DIR.mkdir(parents=True, exist_ok=True)
@@ -193,6 +464,7 @@ class Tray:
         self.alerts = set()
         self.busy = set()
         self._sig = None
+        self._help_win = None
 
         self.rebuild_menu()
         settings = OC.load_settings()
@@ -249,6 +521,11 @@ class Tray:
         item_new.connect("activate", self.on_pick_folder)
         menu.append(item_new)
 
+        item_wd = icon_item("Carpeta de trabajo…", ["folder-open-symbolic", "folder-symbolic"])
+        item_wd.set_tooltip_text(f"Actual: {OC.default_workdir(settings)}")
+        item_wd.connect("activate", self.on_change_workdir)
+        menu.append(item_wd)
+
         item_term = icon_item("Terminal del sistema", ["utilities-terminal-symbolic"])
         item_term.set_sensitive(resolve_terminal(settings) is not None)
         item_term.connect("activate", lambda *_: open_system_terminal())
@@ -296,20 +573,47 @@ class Tray:
         menu.append(self.build_opacity_menu(settings))
         menu.append(self.build_theme_menu(settings))
         menu.append(self.build_key_menu(settings))
+        menu.append(self.build_diag_menu(settings))
 
         menu.append(Gtk.SeparatorMenuItem())
 
-        self.item_autohide = Gtk.CheckMenuItem(label="Ocultar al perder el foco")
-        self.item_autohide.set_active(bool(settings.get("autohide", True)))
-        self.item_autohide.connect("toggled", self.on_autohide)
-        menu.append(self.item_autohide)
+        item_continue = check_item(
+            "Abrir continuando la última sesión (-c)",
+            bool(settings.get("continue_session", True)),
+            lambda *_: self._toggle_setting("continue_session", True),
+        )
+        item_continue.set_tooltip_text(
+            "OpenCode arranca con -c y retoma el contexto anterior; "
+            "desmárcalo para empezar siempre de cero"
+        )
+        menu.append(item_continue)
 
-        self.item_autostart = Gtk.CheckMenuItem(label="Arrancar al iniciar el sistema")
-        self.item_autostart.set_active(OC.autostart_enabled())
-        self.item_autostart.connect("toggled", self.on_autostart)
-        menu.append(self.item_autostart)
+        menu.append(check_item(
+            "Ocultar al perder el foco",
+            bool(settings.get("autohide", True)),
+            lambda *_: self._toggle_setting("autohide", True),
+        ))
+
+        menu.append(check_item(
+            "Arrancar al iniciar el sistema",
+            OC.autostart_enabled(),
+            self.on_autostart,
+        ))
 
         menu.append(Gtk.SeparatorMenuItem())
+
+        item_help = icon_item("Ayuda", ["help-contents-symbolic", "help-browser-symbolic"])
+        item_help.connect("activate", self.on_help)
+        menu.append(item_help)
+
+        ver = OC.app_version()
+        item_ver = icon_item(
+            f"ConBarAI {ver}" if ver else "ConBarAI",
+            ["help-about-symbolic", "dialog-information-symbolic"],
+        )
+        item_ver.set_tooltip_text("Abrir el repositorio del proyecto")
+        item_ver.connect("activate", lambda *_: open_repo())
+        menu.append(item_ver)
 
         item_quit = icon_item("Salir", ["application-exit-symbolic"])
         item_quit.connect("activate", lambda *_: Gtk.main_quit())
@@ -321,66 +625,82 @@ class Tray:
     def build_size_menu(self, settings):
         item_size = icon_item("Tamaño", ["zoom-fit-best-symbolic"])
         sub = Gtk.Menu()
-        first = None
         current = (float(settings.get("width", 0.34)), float(settings.get("height", 0.62)))
         for label, w, h in self.SIZES:
-            item = Gtk.RadioMenuItem.new_with_label_from_widget(first, label)
-            if first is None:
-                first = item
-            if abs(current[0] - w) < 0.01 and abs(current[1] - h) < 0.01:
-                item.set_active(True)
-            item.connect("toggled", self.on_size, w, h)
-            sub.append(item)
+            active = abs(current[0] - w) < 0.01 and abs(current[1] - h) < 0.01
+            sub.append(radio_item(label, active, lambda _i, w=w, h=h: self.on_size(w, h)))
         item_size.set_submenu(sub)
         return item_size
 
     def build_opacity_menu(self, settings):
         item_op = icon_item("Transparencia", ["weather-fog-symbolic"])
         sub = Gtk.Menu()
-        first = None
         current = float(settings.get("opacity", 0.97))
         for label, op in self.OPACITIES:
-            item = Gtk.RadioMenuItem.new_with_label_from_widget(first, label)
-            if first is None:
-                first = item
-            if abs(current - op) < 0.02:
-                item.set_active(True)
-            item.connect("toggled", self.on_opacity, op)
-            sub.append(item)
+            active = abs(current - op) < 0.02
+            sub.append(radio_item(label, active, lambda _i, op=op: self._update_setting("opacity", op)))
         item_op.set_submenu(sub)
         return item_op
 
     def build_theme_menu(self, settings):
         item_t = icon_item("Tema", ["applications-graphics-symbolic"])
         sub = Gtk.Menu()
-        first = None
         current = settings.get("theme", "tokyo-night")
         for key, label in THEME_LABELS.items():
-            item = Gtk.RadioMenuItem.new_with_label_from_widget(first, label)
-            if first is None:
-                first = item
-            if current == key:
-                item.set_active(True)
-            item.connect("toggled", self.on_theme, key)
-            sub.append(item)
+            sub.append(radio_item(
+                label, current == key,
+                lambda _i, key=key: self._update_setting("theme", key),
+            ))
         item_t.set_submenu(sub)
         return item_t
 
     def build_key_menu(self, settings):
         item_key = icon_item("Tecla de apertura", ["input-keyboard-symbolic"])
         sub = Gtk.Menu()
-        first = None
         current = settings.get("keybinding", "<Super>Return")
         for label, binding in self.KEYS:
-            item = Gtk.RadioMenuItem.new_with_label_from_widget(first, label)
-            if first is None:
-                first = item
-            if current == binding:
-                item.set_active(True)
-            item.connect("toggled", self.on_key, binding)
-            sub.append(item)
+            sub.append(radio_item(
+                label, current == binding,
+                lambda _i, b=binding: self.on_key(b),
+            ))
         item_key.set_submenu(sub)
         return item_key
+
+    DIAG_POSITIONS = (
+        ("Consola al lado del panel", "side"),
+        ("Consola debajo del panel", "below"),
+    )
+
+    def build_diag_menu(self, settings):
+        item_d = icon_item("Diagnóstico de crashes", ["applications-science-symbolic", "dialog-information-symbolic"])
+        sub = Gtk.Menu()
+        current = settings.get("diag_pos", "side")
+        for label, pos in self.DIAG_POSITIONS:
+            sub.append(radio_item(
+                label, current == pos,
+                lambda _i, pos=pos: self._update_setting("diag_pos", pos),
+            ))
+        sub.append(Gtk.SeparatorMenuItem())
+        sub.append(check_item(
+            "Vigilar crashes del sistema",
+            bool(settings.get("crash_watch", True)),
+            lambda *_: self._toggle_setting("crash_watch", True),
+        ))
+        sub.append(check_item(
+            "Analizar crashes con IA",
+            bool(settings.get("crash_analyze", True)),
+            lambda *_: self._toggle_setting("crash_analyze", True),
+        ))
+        sub.append(Gtk.SeparatorMenuItem())
+        item_rep = icon_item("Abrir carpeta de informes", ["folder-open-symbolic", "folder-symbolic"])
+        item_rep.set_tooltip_text(str(OC.CRASH_DIR))
+        item_rep.connect(
+            "activate",
+            lambda *_: open_folder(OC._private_dir(OC.CRASH_DIR)),
+        )
+        sub.append(item_rep)
+        item_d.set_submenu(sub)
+        return item_d
 
     # ---------- acciones ----------
     def _update_setting(self, key, value):
@@ -388,13 +708,19 @@ class Tray:
         data[key] = value
         OC.save_settings(data)
 
+    def _toggle_setting(self, key, default):
+        data = OC.load_settings()
+        data[key] = not bool(data.get(key, default))
+        OC.save_settings(data)
+        self.rebuild_menu()
+
     def on_pick_folder(self, *_):
         dlg = Gtk.FileChooserDialog(
             title="Carpeta de trabajo de la sesión",
             action=Gtk.FileChooserAction.SELECT_FOLDER,
         )
         dlg.add_buttons("Cancelar", Gtk.ResponseType.CANCEL, "Abrir", Gtk.ResponseType.OK)
-        default = str(OC.DEFAULT_WORKDIR)
+        default = OC.default_workdir()
         if os.path.isdir(default):
             dlg.set_current_folder(default)
         path = None
@@ -403,6 +729,62 @@ class Tray:
         dlg.destroy()
         if path:
             self.spawn_panel(workdir=path)
+
+    def on_change_workdir(self, *_):
+        dlg = Gtk.FileChooserDialog(
+            title="Carpeta de trabajo por defecto",
+            action=Gtk.FileChooserAction.SELECT_FOLDER,
+        )
+        dlg.add_buttons(
+            "Cancelar", Gtk.ResponseType.CANCEL,
+            "Usar esta carpeta", Gtk.ResponseType.OK,
+        )
+        current = OC.default_workdir()
+        if os.path.isdir(current):
+            dlg.set_current_folder(current)
+        path = None
+        if dlg.run() == Gtk.ResponseType.OK:
+            path = dlg.get_filename()
+        dlg.destroy()
+        if not path or path == current:
+            return
+        confirm = Gtk.MessageDialog(
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.YES_NO,
+            text="Cambiar la carpeta de trabajo",
+        )
+        confirm.format_secondary_text(
+            f"El panel se reiniciará y OpenCode trabajará desde:\n{path}\n\n"
+            "La sesión del panel por defecto se cierra y se reabre ahí "
+            "(con \"continuar sesión\" activo, OpenCode retoma la "
+            "conversación anterior)."
+        )
+        ok = confirm.run() == Gtk.ResponseType.YES
+        confirm.destroy()
+        if not ok:
+            return
+        self._update_setting("workdir", path)
+        self.restart_default_panel()
+
+    def restart_default_panel(self):
+        """Cierra los paneles, termina la sesión tmux por defecto y reabre
+        el panel: OpenCode arranca ya en la carpeta de trabajo nueva."""
+        subprocess.Popen(
+            [BIN_DROP, "--quit"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+
+        def relaunch():
+            subprocess.run(
+                ["tmux", "kill-session", "-t", OC.DEFAULT_SESSION],
+                check=False,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            self.spawn_panel()
+            return False
+
+        GLib.timeout_add(800, relaunch)
 
     def spawn_panel(self, session=None, workdir=None):
         args = [BIN_DROP]
@@ -430,34 +812,32 @@ class Tray:
             start_new_session=True,
         )
 
-    def on_autohide(self, item):
-        self._update_setting("autohide", item.get_active())
+    def on_help(self, *_):
+        if self._help_win is not None:
+            try:
+                if self._help_win.get_window() is not None:
+                    self._help_win.present()
+                    return
+            except Exception:  # noqa: BLE001
+                pass
+        self._help_win = HelpWindow()
+        self._help_win.connect("destroy", self._help_closed)
+        self._help_win.show_all()
+        self._help_win.present()
 
-    def on_autostart(self, item):
-        enabled = OC.set_autostart(item.get_active())
+    def _help_closed(self, *_):
+        self._help_win = None
+
+    def on_autostart(self, *_):
+        enabled = OC.set_autostart(not OC.autostart_enabled())
         self._update_setting("autostart", enabled)
-        if item.get_active() != enabled:
-            item.set_active(enabled)
+        self.rebuild_menu()
 
-    def on_size(self, item, width, height):
-        if not item.get_active():
-            return
+    def on_size(self, width, height):
         self._update_setting("width", width)
         self._update_setting("height", height)
 
-    def on_opacity(self, item, opacity):
-        if not item.get_active():
-            return
-        self._update_setting("opacity", opacity)
-
-    def on_theme(self, item, key):
-        if not item.get_active():
-            return
-        self._update_setting("theme", key)
-
-    def on_key(self, item, binding):
-        if not item.get_active():
-            return
+    def on_key(self, binding):
         self._update_setting("keybinding", binding)
         apply_keybinding(binding)
 

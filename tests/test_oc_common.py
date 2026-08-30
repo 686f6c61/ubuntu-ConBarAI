@@ -1,7 +1,9 @@
 """Tests unitarios de oc_common (sin tocar los ajustes reales del usuario)."""
 
 import json
+import py_compile
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -257,3 +259,93 @@ def test_crash_mute_roundtrip(tmp_path, monkeypatch):
     assert "firefox" in OC.crash_muted_list()
     assert OC.crash_mute("firefox", False) is True
     assert OC.crash_muted("firefox") is False
+
+
+# ---------- versión de la instalación ----------
+
+
+def test_app_version_coincide_con_pyproject():
+    text = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
+    assert f'version = "{OC.app_version()}"' in text
+    assert OC.app_version() != ""
+
+
+def test_app_version_sin_pyproject_devuelve_vacio(monkeypatch, tmp_path):
+    monkeypatch.setattr(OC, "__file__", str(tmp_path / "oc_common.py"))
+    assert OC.app_version() == ""
+
+
+# ---------- ajustes de la 1.4.0 ----------
+
+
+def test_defaults_incluyen_ajustes_140():
+    assert OC.DEFAULTS["diag_pos"] == "side"
+    assert OC.DEFAULTS["continue_session"] is True
+    assert OC.DEFAULTS["crash_watch"] is True
+    assert OC.DEFAULTS["crash_analyze"] is True
+
+
+def test_diag_pos_persiste_en_ajustes(fake_home):
+    data = OC.load_settings()
+    data["diag_pos"] = "below"
+    OC.save_settings(data)
+    assert OC.load_settings()["diag_pos"] == "below"
+
+
+def test_scripts_compilan(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    for name in ("oc-drop", "oc-tray", "oc-crash-watch", "oc-crash-run"):
+        py_compile.compile(
+            str(root / name), cfile=str(tmp_path / f"{name}.pyc"), doraise=True
+        )
+
+
+# ---------- petición de análisis pendiente (watcher -> panel) ----------
+
+
+def test_crash_pending_roundtrip(tmp_path, monkeypatch):
+    crash = tmp_path / "crash"
+    monkeypatch.setattr(OC, "CRASH_DIR", crash)
+    monkeypatch.setattr(OC, "CRASH_PENDING", crash / "pending.json")
+    monkeypatch.setattr(OC, "CRASH_IGNORE_DIR", crash / "ignore")
+    ev = {"program": "gimp", "kind": "segfault", "pid": "123", "raw": "linea"}
+    assert OC.write_crash_pending(ev) is True
+    data, ts = OC.take_crash_pending(0.0)
+    assert data["program"] == "gimp"
+    assert ts > 0
+    otra, ts2 = OC.take_crash_pending(ts)
+    assert otra is None
+    assert ts2 == ts
+    OC.clear_crash_pending()
+    assert not (crash / "pending.json").exists()
+
+
+def test_crash_prompt_contiene_evidencia_y_formato():
+    ev = {"kind": "oom", "program": "firefox", "pid": "42", "raw": "Killed process"}
+    prompt = OC.crash_prompt(ev)
+    assert "firefox" in prompt
+    assert "Killed process" in prompt
+    for seccion in ("Qué pasó", "Evidencia", "Causa probable", "Arreglo", "Cómo evitarlo"):
+        assert seccion in prompt
+
+
+def test_take_stale_pending_reciente_no_la_consume(tmp_path, monkeypatch):
+    crash = tmp_path / "crash"
+    monkeypatch.setattr(OC, "CRASH_DIR", crash)
+    monkeypatch.setattr(OC, "CRASH_PENDING", crash / "pending.json")
+    monkeypatch.setattr(OC, "CRASH_IGNORE_DIR", crash / "ignore")
+    OC.write_crash_pending({"program": "gimp", "kind": "segfault", "raw": "x"})
+    assert OC.take_stale_pending(20) is None
+    assert (crash / "pending.json").exists()
+
+
+def test_take_stale_pending_huerfana_la_consume(tmp_path, monkeypatch):
+    crash = tmp_path / "crash"
+    crash.mkdir()
+    pending = crash / "pending.json"
+    monkeypatch.setattr(OC, "CRASH_PENDING", pending)
+    pending.write_text(json.dumps({"program": "gimp", "ts": time.time() - 100}))
+    data = OC.take_stale_pending(20)
+    assert data["program"] == "gimp"
+    assert not pending.exists()
+    assert OC.take_stale_pending(20) is None

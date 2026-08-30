@@ -3,6 +3,103 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.4.0] - 2026-08-30
+
+### Corregido
+
+- **La consola de diagnóstico salía transparente** (texto flotando sobre el
+  escritorio): VTE reemplaza, sin fundir, lo que la tarjeta pinta debajo, así
+  que un fondo con alfa 0 dejaba un agujero. El panel principal no lo
+  evidenciaba porque la TUI de OpenCode pinta sus propias celdas; la salida
+  plana de `opencode run` no. Ahora el fondo del terminal lleva la misma
+  opacidad que la tarjeta (el ajuste de transparencia aplica de verdad a todo
+  el panel).
+- `_assert_place` estaba definido dos veces en `DiagWindow` y la segunda
+  versión (ingenua, sin compensar el margen del WM ni la escala HiDPI)
+  machacaba a la buena: la consola quedaba desalineada respecto al panel.
+  Verificado con geometría X real en pantalla 2x: convergencia exacta en
+  ambos modos.
+- El bucle de recolocación reafirma ahora también el TAMAÑO (GTK podía dejar
+  la altura en la natural del contenido e ignorar la pedida en el modo
+  "debajo").
+- Abrir la consola de diagnóstico ya no oculta el panel: la ventana de
+  diagnóstico cuenta como propia para el autohide.
+- "Nueva sesión…" del tray cascaba con `AttributeError`
+  (`OC.DEFAULT_WORKDIR` no existe; se usa `default_workdir()`).
+- **Los informes de solución solo se generaban con el panel visible**: la
+  petición de análisis se quedaba huérfana en `pending.json` si el panel
+  estaba oculto (evidencias sin informe). Ahora, si ningún panel la recoge
+  en 20 s, el vigía lanza el análisis headless (`oc-crash-run`), que
+  escribe el informe en la misma carpeta y avisa por notificación.
+- `oc-crash-run` resuelve la ruta de `opencode` aunque el PATH del
+  servicio systemd sea mínimo (`~/.opencode/bin`, `~/.local/bin`).
+
+### Añadido
+
+- Menú **Diagnóstico de crashes** en el tray: posición de la consola
+  (al lado / debajo del panel, ajuste `diag_pos`) e interruptores del vigía
+  (`crash_watch`) y del análisis con IA (`crash_analyze`). Antes estos
+  ajustes existían pero no había forma de tocarlos sin editar el JSON.
+- Ventana de **Ayuda** en el menú del tray con estética de consola:
+  página de manual `conbarai(1)` monoespaciada (la tipografía del panel)
+  y con los colores del tema activo. Documenta qué es ConBarAI (Console
+  Bar Artificial Intelligence), sinopsis de comandos, el panel por dentro
+  (indicadores y atajos), el menú entrada a entrada, el flujo de crashes
+  y TODOS los ajustes de `settings.json` clave a clave con sus valores.
+  Se cierra con Esc y siempre abre por arriba.
+- **README en clave de producto** (y sin la nota de experimental), con
+  capturas reales nuevas del panel, el menú, la escena de crash y la
+  ayuda; y **README.en.md** en inglés enlazado desde la cabecera.
+- La versión instalada se muestra en el menú del tray ("ConBarAI 1.4.0",
+  leída del `pyproject.toml` que acompaña al código) y al pulsarla se abre
+  el repositorio del proyecto.
+- OpenCode arranca con `-c` y retoma la última sesión (útil tras un
+  reinicio del equipo). Nuevo ajuste `continue_session` con casilla en el
+  tray ("Abrir continuando la última sesión"); el botón "Nueva sesión" del
+  panel fuerza siempre un arranque sin contexto arrastrado.
+- **Carpeta de trabajo elegible**: el instalador la pregunta (respetando la
+  configurada) y el tray tiene "Carpeta de trabajo…" con selector y
+  confirmación; al aceptar, el panel se reinicia y OpenCode trabaja desde la
+  carpeta nueva (con `-c` retoma la conversación).
+- "Abrir carpeta de informes" en el menú Diagnóstico de crashes: acceso
+  directo a `~/.local/state/oc-drop/crash/` (evidencias e informes).
+- 7 tests nuevos (45 en total): ajustes de la 1.4.0, versión instalada,
+  compilación de los 4 scripts, ciclo completo de la petición de análisis y
+  formato del prompt de crash.
+
+- **CI y releases en GitHub Actions**: ruff + pytest en cada push y PR, y
+  al empujar una etiqueta `v*` se crea la release con las notas extraídas
+  de este changelog.
+
+### Cambiado
+
+- **Instalador y desinstalador con identidad**: banner ConBarAI, versión
+  leída de `pyproject.toml`, 7 pasos numerados con color (solo en TTY) y
+  resumen final con rutas y siguiente paso. El desinstalador ahora pide
+  confirmación antes de borrar ajustes e informes, detiene también el
+  tray y retira la entrada del menú de Aplicaciones.
+- Todas las opciones del menú del tray llevan icono: los interruptores
+  muestran una casilla marcada/desmarcada y las opciones excluyentes un
+  radio lleno/vacío (los CheckMenuItem/RadioMenuItem de GTK no admiten
+  imagen, así que el propio icono refleja el estado).
+- La skill `ubuntu-operator` se sincroniza con la implementación real:
+  nombres correctos del servicio (`oc-crash-watch.service`) y herramientas
+  propias (`oc-*`), ruta real del mute (`crash/ignore/`), la consola de
+  diagnóstico como ventana propia configurable (`diag_pos`) en vez del
+  panel tmux antiguo, dónde quedan evidencias e informes, y la exigencia
+  de brevedad (el análisis tiene tope de tiempo).
+
+## [1.3.1] - 2026-08-30
+
+### Corregido
+
+- El análisis de crashes se colgaba y caducaba (informe de "superó el tiempo"):
+  el prompt pide ahora un informe breve y el tope sube a 600 s.
+- El aviso de escritorio no salía cuando el crash lo detectaba el servicio:
+  la unidad `oc-crash-watch` ya exporta `DISPLAY` y `DBUS_SESSION_BUS_ADDRESS`.
+- El panel no se "comía" un informe mientras estaba oculto: ahora lo muestra en
+  cuanto lo abres (`check_new_report` no avanza el marcador si no está visible).
+
 ## [1.3.0] - 2026-08-30
 
 ### Añadido
@@ -137,6 +234,8 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.4.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.4.0
+[1.3.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.3.1
 [1.3.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.3.0
 [1.2.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.2.0
 [1.0.2]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.0.2

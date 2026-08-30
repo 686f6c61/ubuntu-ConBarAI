@@ -267,8 +267,8 @@ a crash happens → a watcher notices from Ubuntu's logs → an AI analyses it �
 the user gets findings + fix options, **without ever interrupting work already
 running**.
 
-- **Watcher = a user service** (`conbarai-crash-watch.service`, `PartOf=`
-  graphical session, `Restart=always`), like Omarchy's. Poll every few seconds
+- **Watcher = a user service** (`oc-crash-watch.service`, `PartOf=` graphical
+  session, `Restart=always`), like Omarchy's. Poll every few seconds
   (apport has no single journal `MESSAGE_ID` like systemd-coredump, so watch):
   - `boot_id` changed → machine rebooted (panic/power loss): analyse
     `journalctl -k -b -1`;
@@ -276,21 +276,28 @@ running**.
     sudo): an apport crash — read it via `apport-cli`/sudo for content;
   - `journalctl -k --since <watermark>` matching
     `segfault|general protection|oom-kill|Killed process|hung task|Xid`;
-  - never announce our own `conbarai-*` tooling.
+  - never announce our own tooling (`oc-drop`, `oc-tray`, `oc-crash-watch`,
+    `oc-crash-run`).
 - **Filters (as Omarchy does):** only the current user's crashes (apport file
   carries the uid; kernel lines need matching), a dedupe window per program
-  (crash loops), an ignore regex, and a global off switch.
+  (crash loops), a per-program mute, and a global off switch.
 - **Runner:** analyse with a headless `opencode run "<context pack>"` (a *new*
-  session, never `--continue`). The panel injects `OPENCODE_CONFIG` with
-  `skills.paths`, so that run already carries this skill.
-- **Never disturb running work:** if a session is busy, open the diagnostic
-  terminal **below** the first (closable second pane, own tmux `oc-diag`) and
-  run there; if idle, run in the current panel. A desktop notification
-  "Process crashed: <name> — ver informe" offers the click.
-- **Mute:** per-program flag in `~/.local/state/oc-drop/crash-ignore/<name>`
-  (list = that dir; `off` removes it). Sanitise `<name>` to a single path
-  component so a hostile `comm`/path can't escape the dir. A global kill switch
-  mirrors Omarchy's toggle (tray option "Captura de crashes").
+  session, never `--continue`). The run gets `OPENCODE_CONFIG` with read-only
+  bash permissions and `skills.paths`, so it already carries this skill.
+- **Never disturb running work:** the analysis opens in its **own diagnostic
+  window** (beside or below the panel, setting `diag_pos`), streaming the
+  agent live; the main panel's session is never touched or resized. A desktop
+  notification announces the crash.
+- **Be brief — the run has a hard timeout:** the report must arrive within
+  minutes. At most 3-4 read-only commands; if the evidence in the context
+  pack already tells the story, answer without executing anything.
+- **Artifacts on disk** (`~/.local/state/oc-drop/crash/`): evidence packs
+  `<ts>-<program>-<kind>.md`, finished reports `<ts>-<program>-report.md`,
+  watcher state `watch.json`, mutes in `ignore/`.
+- **Mute:** per-program flag in `~/.local/state/oc-drop/crash/ignore/<name>`
+  (list = that dir; removing the file unmutes). Sanitise `<name>` to a single
+  path component so a hostile `comm`/path can't escape the dir. The global
+  switches live in the tray menu "Diagnóstico de crashes" (vigía y análisis).
 - **Required report shape** (Spanish, user's language):
   1. **Qué pasó** — one sentence: what died, when, signal/event.
   2. **Evidencia** — the exact log/report lines, verbatim (redact any secrets).

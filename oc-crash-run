@@ -16,6 +16,7 @@ Uso (normalmente invocado por el watcher):
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 import warnings
@@ -28,32 +29,6 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 import oc_common as OC
 
 SELF = "oc-crash-run"
-
-PROMPT = """Se ha detectado un crash en este equipo Ubuntu y quiero saber por qué.
-
-Hechos recogidos por ConBarAI desde el journal del kernel:
-- tipo: {kind}
-- programa: {program}
-- pid: {pid}
-
-Evidencia:
-```
-{evidence}
-```
-
-Usa la skill `ubuntu-operator` (sección de *crash forensics* de Ubuntu):
-evidencia primero, contrasta `journalctl -k` y, si aporta, `/var/crash`.
-DIAGNÓSTICO SOLO: no modifiques nada. **Sé breve y directo**: como mucho 3 o 4
-comandos de lectura; no rebusques más allá de lo obvio. Si con la evidencia ya
-está claro, respóndeme sin ejecutar nada.
-
-Devuelve el informe en ESPAÑOL, corto, con exactamente este formato:
-1. Qué pasó — una frase (qué murió, cuándo, señal/evento).
-2. Evidencia — solo las líneas clave (tacha secretos).
-3. Causa probable — 1-3 frases; di qué es PROBADO y qué INFERIDO.
-4. Arreglo — hasta 2 opciones (más segura primero) con su reversión.
-5. Cómo evitarlo — una línea.
-"""
 
 
 def strip_ansi(text):
@@ -73,6 +48,20 @@ def notify(title, body):
         OC.log("notify-send no disponible")
 
 
+def find_opencode():
+    """Ruta de opencode aunque el PATH del servicio sea mínimo."""
+    found = shutil.which("opencode")
+    if found:
+        return found
+    for cand in (
+        OC.HOME / ".opencode/bin/opencode",
+        OC.HOME / ".local/bin/opencode",
+    ):
+        if cand.exists():
+            return str(cand)
+    return "opencode"
+
+
 def read_evidence(args, pack):
     if pack and Path(pack).is_file():
         text = Path(pack).read_text()
@@ -85,12 +74,12 @@ def read_evidence(args, pack):
 
 def run_analysis(args, pack):
     evidence = read_evidence(args, pack)
-    prompt = PROMPT.format(
-        kind=args.kind or "desconocido",
-        program=args.program or "desconocido",
-        pid=args.pid or "n/d",
-        evidence=evidence or "(sin evidencia)",
-    )
+    prompt = OC.crash_prompt({
+        "kind": args.kind or "desconocido",
+        "program": args.program or "desconocido",
+        "pid": args.pid,
+        "raw": evidence or "(sin evidencia)",
+    })
     cfg = OC.crash_config()
     env = os.environ.copy()
     if cfg:
@@ -98,7 +87,7 @@ def run_analysis(args, pack):
     wd = OC.default_workdir()
     try:
         proc = subprocess.run(
-            ["opencode", "run", prompt],
+            [find_opencode(), "run", prompt],
             cwd=wd,
             env=env,
             text=True,

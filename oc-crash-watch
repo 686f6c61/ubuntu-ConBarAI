@@ -14,7 +14,6 @@ Fase 2. Uso:
   oc-crash-watch --once     una pasada y sale (para probar)
 """
 
-import os
 import subprocess
 import sys
 import time
@@ -28,6 +27,35 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 import oc_common as OC
 
 SELF = "oc-crash-watch"
+
+# Segundos que se le dan a un panel visible para recoger la petición y
+# analizar en directo; pasado esto, el informe se genera en headless.
+STALE_PENDING_S = 20
+
+
+def launch_headless(ev):
+    """Análisis desacoplado con oc-crash-run: escribe el informe en
+    ~/.local/state/oc-drop/crash/ y notifica, sin necesitar panel."""
+    runner = Path(__file__).resolve().parent / "oc-crash-run"
+    cmd = [
+        sys.executable, str(runner),
+        "--program", ev.get("program") or "desconocido",
+        "--kind", ev.get("kind") or "desconocido",
+        "--evidence", ev.get("raw") or "",
+    ]
+    if ev.get("pid"):
+        cmd += ["--pid", str(ev["pid"])]
+    try:
+        subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        return True
+    except OSError as e:
+        OC.log("no se pudo lanzar el análisis headless:", e)
+        return False
 
 
 def now_iso():
@@ -72,23 +100,6 @@ def write_pack(ev):
         return None
 
 
-def spawn_analyze(pack_path, ev):
-    """Lanza oc-crash-run desacoplado (no bloquea el bucle del watcher)."""
-    runner = Path(__file__).resolve().parent / "oc-crash-run"
-    if not runner.is_file():
-        runner = OC.HOME / ".local/bin/oc-crash-run"
-    args = [sys.executable, str(runner), "--pack", str(pack_path),
-            "--program", ev["program"], "--kind", ev["kind"], "--pid", ev["pid"]]
-    try:
-        subprocess.Popen(
-            args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL, start_new_session=True,
-            env=os.environ.copy(),
-        )
-    except OSError as e:
-        OC.log("no se pudo lanzar el análisis:", e)
-
-
 def poll(state, cfg, seen):
     """Una pasada de vigilancia. Devuelve nº de eventos notificados."""
     cur = OC.boot_id()
@@ -126,8 +137,9 @@ def poll(state, cfg, seen):
             + (f" (PID {ev['pid']})" if ev["pid"] else "")
             + (f"\nEvidencia: {path}" if path else ""),
         )
-        if cfg.get("crash_analyze", True) and path:
-            spawn_analyze(path, ev)
+        # Patrón Omarchy: que un panel VISIBLE lance al agente en directo.
+        if cfg.get("crash_analyze", True):
+            OC.write_crash_pending(ev)
         seen[prog] = now
         fired += 1
 
@@ -159,6 +171,10 @@ def main():
                 poll(state, cfg, seen)
             except Exception as e:
                 OC.log("poll de crashes falló:", e)
+            # Petición que ningún panel visible recogió: informe headless
+            stale = OC.take_stale_pending(STALE_PENDING_S)
+            if stale and cfg.get("crash_analyze", True):
+                launch_headless(stale)
         else:
             state["watermark"] = now_iso()  # no inundar al reactivar
         OC.save_crash_state(state)
