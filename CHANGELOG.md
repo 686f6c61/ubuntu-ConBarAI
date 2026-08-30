@@ -7,8 +7,9 @@ y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Añadido
 
-- **Web del producto** (rama `landing`, servida por GitHub Pages desde
-  `landing:/docs`): una página con la misma estética de consola que la
+- **Web del producto** en https://conbarai.686f6c61.dev (rama `landing`,
+  desplegada en el servidor propio con Coolify + Traefik, patrón
+  Dockerfile + nginx): una página con la misma estética de consola que la
   ayuda `conbarai(1)` — Tokyo Night, JetBrains Mono, tarjetas terminal,
   banner ASCII — con el porqué, el panel, el flujo de crashes con un
   informe real, el menú, la instalación, todos los ajustes y enlaces a
