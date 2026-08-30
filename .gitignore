@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Registros
+*.log
+
+# Artefactos de herramientas de IA: nunca entrar al repositorio
+# (solo producto: código, tests, docs de producto e instaladores)
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+GEMINI.md
+COPILOT.md
+.claude/
+.opencode/
+.codex/
+.gemini/
+.aider*
+.continue/
+.copilot*
+.cursor/
+.windsurf/
+mcp.json
+*.audit.md
+*.decision.md
+TODO-IA.md

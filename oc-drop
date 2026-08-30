@@ -1,0 +1,515 @@
+#!/usr/bin/env python3
+"""oc-drop: paneles flotantes estilo Omarchy con OpenCode (ConBarAI).
+
+GTK3+VTE sobre XWayland: esquinas redondeadas, sombra, temas, esquina
+superior derecha bajo la barra de GNOME. Cada sesión tmux es un panel;
+la sesión vive aunque ocultes el panel.
+
+Uso:
+  oc-drop                         abre/oculta el panel por defecto
+  oc-drop --session N [--workdir R]  panel de una sesión concreta
+  oc-drop --quit                  cierra todos los paneles (tmux sigue vivo)
+"""
+
+import os
+import re
+import subprocess
+import sys
+import time
+import warnings
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+os.environ.setdefault("GDK_BACKEND", "x11")
+
+# GTK3/libayatana emiten DeprecationWarning sistemáticos: no aportan aquí.
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+import cairo
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
+gi.require_version("Vte", "2.91")
+from gi.repository import Gdk, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
+
+import oc_common as OC  # noqa: E402
+
+APP_ID = "com.local.ocdrop"
+
+MARGIN_R = 8
+MARGIN_T = 6
+SHADOW_T, SHADOW_R, SHADOW_B, SHADOW_L = 10, 10, 18, 10
+
+MAX_W, MAX_H = 0.985, 0.94
+
+FOCUS_GRACE_S = 0.9
+
+
+def rgba(hex_color, alpha=None):
+    c = Gdk.RGBA()
+    c.parse(hex_color)
+    if alpha is not None:
+        c.alpha = alpha
+    return c
+
+
+def build_css(theme, opacity):
+    return f"""
+window {{
+  background: transparent;
+  padding: {SHADOW_T}px {SHADOW_R}px {SHADOW_B}px {SHADOW_L}px;
+}}
+.drop-card {{
+  background: alpha({theme['bg']}, {opacity:.2f});
+  border-radius: 14px;
+  border: 1px solid {theme['border']};
+  box-shadow: 0 16px 44px alpha(#000000, 0.60);
+}}
+.drop-head {{
+  background: alpha({theme['bg_head']}, {min(1.0, opacity + 0.03):.2f});
+  border-radius: 14px 14px 0 0;
+  padding: 4px 8px 4px 12px;
+  border-bottom: 1px solid {theme['border']};
+}}
+.drop-dot {{
+  color: {theme['green']};
+  font-size: 11px;
+  padding-right: 2px;
+}}
+.drop-dot.dead {{ color: {theme['red']}; }}
+.drop-dot.alert {{ color: {theme['yellow']}; }}
+.drop-title {{
+  color: {theme['fg']};
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+}}
+.drop-sub {{
+  color: {theme['fg_dim']};
+  font-size: 10.5px;
+  padding-left: 6px;
+}}
+.drop-usage {{
+  color: {theme['accent']};
+  font-size: 10px;
+  padding-right: 8px;
+}}
+.hdr-btn {{
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 4px;
+  margin-left: 2px;
+  color: {theme['fg_dim']};
+  outline: none;
+  box-shadow: none;
+}}
+.hdr-btn:hover {{
+  background: alpha({theme['fg']}, 0.10);
+  color: {theme['fg']};
+}}
+.hdr-btn:active {{
+  background: alpha({theme['fg']}, 0.16);
+}}
+"""
+
+
+def workarea():
+    """Área útil en coords X11 (excluye la barra superior de GNOME)."""
+    try:
+        out = subprocess.check_output(
+            ["xprop", "-root", "_NET_WORKAREA"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        m = re.search(r"=\s*(-?\d+),\s*(-?\d+),\s*(\d+),\s*(\d+)", out)
+        if m:
+            x, y, w, h = map(int, m.groups())
+            return x, y, w, h
+    except (OSError, subprocess.SubprocessError) as e:
+        OC.log("xprop no disponible:", e)
+    try:
+        out = subprocess.check_output(
+            ["xdotool", "getdisplaygeometry"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        w, h = map(int, out.split())
+        return 0, 64, w, h - 64
+    except (OSError, subprocess.SubprocessError, ValueError) as e:
+        OC.log("xdotool no disponible:", e)
+    return 0, 64, 1920, 1000
+
+
+def run_tmux(args):
+    try:
+        return subprocess.run(
+            ["tmux", *args],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError as e:
+        OC.log("tmux no disponible:", e)
+        return None
+
+
+class DropWindow(Gtk.ApplicationWindow):
+    def __init__(self, app, session, workdir):
+        super().__init__(application=app)
+        self.session = session
+        self.workdir = workdir
+        self.set_title(f"OpenCode · {session}")
+        self.set_decorated(False)
+        self.set_resizable(True)
+        self.set_skip_taskbar_hint(True)
+        self.set_skip_pager_hint(True)
+        self.set_keep_above(True)
+        self.stick()
+        self.set_type_hint(Gdk.WindowTypeHint.UTILITY)
+        self.set_accept_focus(True)
+        self.child_alive = False
+        self._respawn_requested = False
+        self._grace_until = 0.0
+        self._maximized = False
+        self._css_provider = None
+        self._look_key = None
+        self._busy = None
+
+        screen = Gdk.Screen.get_default()
+        visual = screen.get_rgba_visual()
+        if visual:
+            self.set_visual(visual)
+        self.set_app_paintable(True)
+
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        card.get_style_context().add_class("drop-card")
+
+        head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        head.get_style_context().add_class("drop-head")
+        self.dot = Gtk.Label(label="\u25cf")
+        self.dot.get_style_context().add_class("drop-dot")
+        self.title = Gtk.Label(label=session, halign=Gtk.Align.START)
+        self.title.get_style_context().add_class("drop-title")
+        self.spinner = Gtk.Spinner()
+        self.spinner.set_tooltip_text("El agente está trabajando")
+        self.sub = Gtk.Label(
+            label=self.workdir.replace(str(OC.HOME), "~"), halign=Gtk.Align.START
+        )
+        self.sub.get_style_context().add_class("drop-sub")
+        self.usage = Gtk.Label(label="", halign=Gtk.Align.END)
+        self.usage.get_style_context().add_class("drop-usage")
+        head.pack_start(self.dot, False, False, 0)
+        head.pack_start(self.title, False, False, 0)
+        head.pack_start(self.spinner, False, False, 0)
+        head.pack_start(self.sub, False, False, 0)
+        head.pack_end(self.usage, False, False, 0)
+
+        btn_max = Gtk.Button()
+        self.btn_max_img = Gtk.Image.new_from_icon_name(
+            "view-fullscreen-symbolic", Gtk.IconSize.MENU
+        )
+        btn_max.add(self.btn_max_img)
+        btn_max.get_style_context().add_class("hdr-btn")
+        btn_max.set_tooltip_text("Maximizar / restaurar")
+        btn_max.connect("clicked", self.on_maximize)
+
+        btn_new = Gtk.Button()
+        btn_new.add(Gtk.Image.new_from_icon_name("view-refresh-symbolic", Gtk.IconSize.MENU))
+        btn_new.get_style_context().add_class("hdr-btn")
+        btn_new.set_tooltip_text("Nueva sesión")
+        btn_new.connect("clicked", self.on_new_session)
+
+        btn_close = Gtk.Button()
+        btn_close.add(Gtk.Image.new_from_icon_name("window-close-symbolic", Gtk.IconSize.MENU))
+        btn_close.get_style_context().add_class("hdr-btn")
+        btn_close.set_tooltip_text("Ocultar")
+        btn_close.connect("clicked", lambda *_: self.hide())
+
+        head.pack_end(btn_close, False, False, 0)
+        head.pack_end(btn_new, False, False, 0)
+        head.pack_end(btn_max, False, False, 0)
+        card.pack_start(head, False, False, 0)
+
+        self.term = Vte.Terminal()
+        self.term.set_scroll_on_output(False)
+        self.term.set_scroll_on_keystroke(True)
+        self.term.set_scrollback_lines(10000)
+        self.term.connect("child-exited", self.on_child_exited)
+        card.pack_start(self.term, True, True, 0)
+
+        self.add(card)
+        self._apply_look(force=True)
+
+        self.connect("focus-in-event", self.on_focus_in)
+        self.connect("focus-out-event", self.on_focus_out)
+        self.connect("map-event", self.on_map_event)
+        self.connect("delete-event", self.on_delete)
+
+    # ---------- aspecto ----------
+
+    def _apply_look(self, force=False):
+        s = OC.load_settings()
+        theme = OC.THEMES.get(s["theme"], OC.THEMES["tokyo-night"])
+        key = (s["theme"], s["opacity"], s["font"], s["font_size"])
+        if not force and key == self._look_key:
+            return
+        self._look_key = key
+        screen = Gdk.Screen.get_default()
+        if self._css_provider is not None:
+            Gtk.StyleContext.remove_provider_for_screen(screen, self._css_provider)
+        provider = Gtk.CssProvider()
+        provider.load_from_data(build_css(theme, s["opacity"]).encode())
+        Gtk.StyleContext.add_provider_for_screen(
+            screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+        self._css_provider = provider
+        fam = OC.detect_font(s)
+        self.term.set_font(Pango.FontDescription(f"{fam} {s['font_size']}"))
+        self.term.set_colors(
+            rgba(theme["fg"]),
+            rgba(theme["bg"], 0.0),
+            [rgba(c) for c in theme["palette"]],
+        )
+
+    # ---------- sesión ----------
+
+    def spawn(self):
+        OC.record_session(self.session, self.workdir)
+        OC.ensure_hooks(self.session)
+        env = os.environ.copy()
+        env.setdefault("TERM", "xterm-256color")
+        env_list = [f"{k}={v}" for k, v in env.items()]
+        argv = ["tmux", "new", "-A", "-s", self.session, "opencode"]
+        try:
+            self.term.spawn_async(
+                Vte.PtyFlags.DEFAULT, self.workdir, argv, env_list,
+                GLib.SpawnFlags.DEFAULT, None, -1, None, None,
+            )
+        except TypeError:
+            self.term.spawn_async(
+                Vte.PtyFlags.DEFAULT, self.workdir, argv, env_list,
+                GLib.SpawnFlags.DEFAULT, None, None, -1, None, None,
+            )
+        self.child_alive = True
+        self._set_dot()
+        GLib.timeout_add(400, self.tune_tmux)
+
+    def tune_tmux(self):
+        for opt, val in (("status", "off"), ("mouse", "on")):
+            run_tmux(["set-option", "-t", self.session, opt, val])
+        return False
+
+    def on_new_session(self, *_):
+        run_tmux(["kill-session", "-t", self.session])
+        if self.child_alive:
+            self._respawn_requested = True
+        else:
+            self.term.reset(True, True)
+            self.spawn()
+            self.show_drop()
+
+    def on_child_exited(self, *_):
+        self.child_alive = False
+        self._set_dot()
+        if self._respawn_requested:
+            self._respawn_requested = False
+            self.term.reset(True, True)
+            self.spawn()
+        elif self.get_visible():
+            self.hide()
+
+    def _set_dot(self, alert=False):
+        """Prioridad: muerto (rojo) > alerta (ámbar) > vivo (verde)."""
+        ctx = self.dot.get_style_context()
+        ctx.remove_class("dead")
+        ctx.remove_class("alert")
+        if not self.child_alive:
+            ctx.add_class("dead")
+        elif alert:
+            ctx.add_class("alert")
+
+    # ---------- estado (encuesta del app) ----------
+
+    def update_state(self):
+        alert = self.session in OC.alerts_present()
+        if not self.child_alive:
+            self._set_dot(alert)
+            self.spinner.stop()
+            return
+        state = OC.busy(self.session)
+        if state is not None:
+            self._busy = state
+        if self._busy:
+            self.spinner.start()
+        else:
+            self.spinner.stop()
+        self._set_dot(alert)
+
+    def update_usage(self):
+        u = OC.usage(self.workdir)
+        self.usage.set_text(OC.format_usage(*u) if u else "")
+
+    # ---------- mostrar / ocultar ----------
+
+    def show_drop(self):
+        self._apply_look()
+        if not self.child_alive:
+            self.term.reset(True, True)
+            self.spawn()
+        self.show_all()
+        self.set_keep_above(True)
+        GLib.idle_add(self.apply_geometry)
+        self._grace_until = time.monotonic() + FOCUS_GRACE_S
+        self.present()
+
+    def toggle(self):
+        if self.get_visible():
+            self.hide()
+        else:
+            self.show_drop()
+
+    def on_maximize(self, *_):
+        self._maximized = not self._maximized
+        self.btn_max_img.set_from_icon_name(
+            "view-restore-symbolic" if self._maximized else "view-fullscreen-symbolic",
+            Gtk.IconSize.MENU,
+        )
+        GLib.idle_add(self.apply_geometry)
+
+    def apply_geometry(self):
+        wa_x, wa_y, wa_w, wa_h = workarea()
+        f = self.get_scale_factor() or 1
+        if self._maximized:
+            wf, hf = MAX_W, MAX_H
+        else:
+            s = OC.load_settings()
+            wf, hf = s["width"], s["height"]
+        card_w = int(wa_w * wf / f)
+        card_h = int(wa_h * hf / f)
+        self.resize(card_w + SHADOW_L + SHADOW_R, card_h + SHADOW_T + SHADOW_B)
+        total_w = (card_w + SHADOW_L + SHADOW_R) * f
+        x = (wa_x + wa_w - MARGIN_R * f - total_w + SHADOW_R * f) // f
+        y = (wa_y + (MARGIN_T - SHADOW_T) * f) // f
+        self.move(x, y)
+        self.term.grab_focus()
+        GLib.idle_add(self.apply_input_region)
+        return False
+
+    def apply_input_region(self):
+        """La zona de sombra deja pasar los clics a las ventanas de abajo."""
+        try:
+            f = self.get_scale_factor() or 1
+            card = self.get_child()
+            alloc = card.get_allocation()
+            region = cairo.Region(cairo.RectangleInt(
+                alloc.x * f, alloc.y * f, alloc.width * f, alloc.height * f
+            ))
+            gd = self.get_window()
+            if gd and alloc.width > 1:
+                gd.input_shape_combine_region(region, 0, 0)
+        except (OSError, ValueError) as e:
+            OC.log("región de entrada no aplicada:", e)
+        return False
+
+    # ---------- eventos ----------
+
+    def on_map_event(self, *_):
+        GLib.idle_add(self.apply_geometry)
+
+    def on_focus_in(self, *_):
+        OC.clear_alert(self.session)
+        self.update_state()
+        return False
+
+    def on_focus_out(self, *_):
+        if OC.load_settings().get("autohide", True) and time.monotonic() > self._grace_until:
+            self.hide()
+        return False
+
+    def on_delete(self, *_):
+        self.hide()
+        return True
+
+
+class DropApp(Gtk.Application):
+    def __init__(self):
+        super().__init__(
+            application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE
+        )
+        self.windows = {}
+        self._usage_tick = 0
+
+    def do_startup(self):
+        Gtk.Application.do_startup(self)
+        GLib.timeout_add_seconds(2, self.on_poll)
+
+    def do_command_line(self, command_line):
+        args = list(command_line.get_arguments())[1:]
+        session = workdir = None
+        quit_all = False
+        i = 0
+        while i < len(args):
+            if args[i] == "--session" and i + 1 < len(args):
+                session = args[i + 1]
+                i += 2
+            elif args[i] == "--workdir" and i + 1 < len(args):
+                workdir = args[i + 1]
+                i += 2
+            elif args[i] == "--quit":
+                quit_all = True
+                i += 1
+            else:
+                i += 1
+        if quit_all:
+            for win in list(self.windows.values()):
+                win.destroy()
+            self.windows.clear()
+            self.quit()
+            return 0
+        if session is None and workdir is not None:
+            session = OC.session_for_workdir(workdir)
+        session = session or OC.DEFAULT_SESSION
+        try:
+            OC.validate_session(session)
+        except ValueError as e:
+            OC.log("sesión rechazada:", e)
+            return 1
+        self.ensure_window(session, workdir)
+        return 0
+
+    def do_activate(self):
+        self.ensure_window(OC.DEFAULT_SESSION, None)
+
+    def ensure_window(self, session, workdir):
+        win = self.windows.get(session)
+        if win is not None:
+            win.toggle()
+            return
+        s = OC.load_settings()
+        wd = os.path.expanduser(workdir or OC.default_workdir(s))
+        if not os.path.isdir(wd):
+            wd = str(OC.HOME)
+        win = DropWindow(self, session, wd)
+        self.windows[session] = win
+        win.show_drop()
+
+    def on_poll(self):
+        self._usage_tick += 1
+        refresh_usage = self._usage_tick % 8 == 0
+        for win in list(self.windows.values()):
+            win.update_state()
+            if refresh_usage:
+                win.update_usage()
+        return True
+
+
+def main():
+    app = DropApp()
+    sys.exit(app.run(sys.argv))
+
+
+if __name__ == "__main__":
+    main()

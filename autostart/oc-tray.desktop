@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=OpenCode tray
+Comment=Icono de OpenCode en la barra superior (ConBarAI)
+Exec=__HOME__/.local/bin/oc-tray
+Terminal=false
+X-GNOME-Autostart-enabled=true
+Categories=Utility;

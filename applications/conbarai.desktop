@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=ConBarAI
+GenericName=Panel de OpenCode
+Comment=Panel flotante estilo Omarchy con OpenCode
+Exec=__HOME__/.local/bin/oc-drop
+Icon=__HOME__/.local/share/oc-drop/icon.svg
+Terminal=false
+Categories=Development;Utility;
+Keywords=opencode;agent;panel;terminal;conbarai;
+StartupWMClass=oc-drop
