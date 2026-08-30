@@ -4,6 +4,8 @@
 a mano, y con una misión extra: convertir los crashes de Linux en informes
 con causa y arreglo.
 
+**Web**: https://conbarai.686f6c61.dev
+
 [English](README.en.md) · Español
 
 ---
