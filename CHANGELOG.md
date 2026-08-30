@@ -3,6 +3,16 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.0.1] - 2026-08-30
+
+### Corregido
+
+- El panel se ocultaba al intentar pegar con el menú contextual de VTE
+  (clic derecho) o al interactuar con popups: el menú roba el foco y el
+  autohide lo interpretaba como una pérdida de foco definitiva. Ahora el
+  ocultado se difiere mientras haya un menú activo y, al cerrarse, solo
+  se oculta si el foco quedó en otra ventana.
+
 ## [1.0.0] - 2026-08-30
 
 Primera versión estable, lista para la comunidad de Ubuntu.
@@ -58,4 +68,5 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.0.1]: https://github.com/conbarai/conbarai/releases/tag/v1.0.1
 [1.0.0]: https://github.com/conbarai/conbarai/releases/tag/v1.0.0

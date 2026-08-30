@@ -425,7 +425,20 @@ class DropWindow(Gtk.ApplicationWindow):
         return False
 
     def on_focus_out(self, *_):
+        if Gtk.grab_get_current() is not None:
+            # Menú contextual (copiar/pegar) abierto: decide al cerrarlo.
+            GLib.timeout_add(200, self._deferred_autohide)
+            return False
         if OC.load_settings().get("autohide", True) and time.monotonic() > self._grace_until:
+            self.hide()
+        return False
+
+    def _deferred_autohide(self):
+        if Gtk.grab_get_current() is not None:
+            return True
+        if not self.get_visible():
+            return False
+        if OC.load_settings().get("autohide", True) and not self.is_active():
             self.hide()
         return False
 
