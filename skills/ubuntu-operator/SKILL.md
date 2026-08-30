@@ -291,6 +291,17 @@ running**.
 - **Be brief — the run has a hard timeout:** the report must arrive within
   minutes. At most 3-4 read-only commands; if the evidence in the context
   pack already tells the story, answer without executing anything.
+- **The 5-section report is the LAST thing you output, always.** The run's
+  stdout IS the saved report: a turn that ends after command output but
+  before the report leaves the user an empty file (it happened — a live
+  analysis ended with an `ls /var/crash` and no conclusions). If commands
+  fail, are denied, or time is short, write the report anyway with what
+  you have and say what is missing.
+- **Expect permission denials and keep going:** the run's config allows a
+  closed list of read-only commands; a compound command (`&&`, `;`) may be
+  denied even when each part is allowed. Split it into simple commands, or
+  skip it — a denial is never a reason to stop or to leave the report
+  unwritten.
 - **Artifacts on disk** (`~/.local/state/oc-drop/crash/`): evidence packs
   `<ts>-<program>-<kind>.md`, finished reports `<ts>-<program>-report.md`,
   watcher state `watch.json`, mutes in `ignore/`.

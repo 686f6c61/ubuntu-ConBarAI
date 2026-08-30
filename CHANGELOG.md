@@ -14,6 +14,11 @@ y adherido al [Versionado Semántico](https://semver.org/lang/es/).
   banner ASCII — con el porqué, el panel, el flujo de crashes con un
   informe real, el menú, la instalación, todos los ajustes y enlaces a
   GitHub y X/Twitter.
+- La skill `ubuntu-operator` blinda el análisis automático: el informe de
+  5 secciones es SIEMPRE lo último que sale (aunque fallen o se denieguen
+  comandos, se escribe con lo que haya), y los comandos compuestos
+  denegados por la config de solo lectura se parten en simples y se sigue.
+  Corrige el caso real de un análisis que terminó sin conclusiones.
 
 ## [1.4.0] - 2026-08-30
 
