@@ -386,9 +386,12 @@ class DropWindow(Gtk.ApplicationWindow):
 
     def check_new_report(self):
         """Si ha llegado un informe nuevo y el panel está a la vista, lo abre
-        en la segunda terminal, sin molestar la sesión de arriba."""
+        en la segunda terminal, sin molestar la sesión de arriba. Si está
+        oculto, no lo consume: lo mostrará la próxima vez que se abra."""
         latest = self._crash_latest_mtime()
         if latest <= self._diag_max_mtime:
+            return False
+        if not self.get_visible():
             return False
         try:
             rep = max(
@@ -398,7 +401,7 @@ class DropWindow(Gtk.ApplicationWindow):
         except ValueError:
             rep = None
         self._diag_max_mtime = latest
-        if rep is not None and self.get_visible():
+        if rep is not None:
             self.open_diag(str(rep))
             return True
         return False
