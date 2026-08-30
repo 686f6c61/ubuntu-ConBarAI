@@ -3,6 +3,23 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.0.2] - 2026-08-30
+
+### Añadido
+
+- Copiar y pegar en el panel: atajos `Ctrl+Shift+C` / `Ctrl+Shift+V`,
+  `Ctrl+Insert` / `Shift+Insert` y menú en el clic derecho con Copiar y
+  Pegar (esta compilación de VTE GTK3 no los traía de serie).
+- Arrastrar y soltar archivos y carpetas dentro del panel: se insertan
+  como rutas entrecomilladas listas para el comando; el texto suelto
+  también se pega.
+
+### Corregido
+
+- El autohide se ocultaba con robos de foco de popups. En lugar de fiarse
+  de un grab de GTK (que XWayland no siempre expone), ahora solo se
+  oculta cuando la ventana activa de X11 pasa a ser otra ventana real.
+
 ## [1.0.1] - 2026-08-30
 
 ### Corregido
@@ -68,5 +85,6 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
-[1.0.1]: https://github.com/conbarai/conbarai/releases/tag/v1.0.1
-[1.0.0]: https://github.com/conbarai/conbarai/releases/tag/v1.0.0
+[1.0.2]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.0.2
+[1.0.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.0.1
+[1.0.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.0.0

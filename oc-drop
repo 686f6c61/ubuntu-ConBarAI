@@ -13,6 +13,7 @@ Uso:
 
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -177,6 +178,7 @@ class DropWindow(Gtk.ApplicationWindow):
         self._css_provider = None
         self._look_key = None
         self._busy = None
+        self._ctx_menu = None
 
         screen = Gdk.Screen.get_default()
         visual = screen.get_rgba_visual()
@@ -237,7 +239,11 @@ class DropWindow(Gtk.ApplicationWindow):
         self.term.set_scroll_on_output(False)
         self.term.set_scroll_on_keystroke(True)
         self.term.set_scrollback_lines(10000)
+        self.term.set_allow_hyperlink(True)
         self.term.connect("child-exited", self.on_child_exited)
+        self.term.connect("button-press-event", self.on_term_button)
+        self.term.connect("key-press-event", self.on_term_key)
+        self._setup_clipboard_dnd()
         card.pack_start(self.term, True, True, 0)
 
         self.add(card)
@@ -247,6 +253,84 @@ class DropWindow(Gtk.ApplicationWindow):
         self.connect("focus-out-event", self.on_focus_out)
         self.connect("map-event", self.on_map_event)
         self.connect("delete-event", self.on_delete)
+
+    # ---------- portapapeles y arrastrar/soltar ----------
+
+    def _setup_clipboard_dnd(self):
+        Vte.Terminal.drag_dest_set(
+            self.term, Gtk.DestDefaults.MOTION | Gtk.DestDefaults.HIGHLIGHT,
+            [
+                Gtk.TargetEntry.new("text/uri-list", 0, 1),
+                Gtk.TargetEntry.new("text/plain", 0, 2),
+                Gtk.TargetEntry.new("UTF8_STRING", 0, 2),
+                Gtk.TargetEntry.new("STRING", 0, 2),
+            ],
+            Gdk.DragAction.COPY,
+        )
+        self.term.connect("drag-data-received", self.on_drag_data)
+
+    def on_drag_data(self, _term, _ctx, _x, _y, data, info, _time):
+        if info == 1:
+            uris = [u.strip() for u in (data.get_text() or "").splitlines() if u.strip()]
+            paths = [GLib.filename_from_uri(u)[0] for u in uris if u.startswith("file:")]
+            paths = [p for p in paths if p]
+            if paths:
+                self.term.paste_text(" ".join(shlex.quote(p) for p in paths))
+                return
+        texto = data.get_text()
+        if texto:
+            self.term.paste_text(texto)
+
+    def do_copy(self):
+        if self.term.get_has_selection():
+            self.term.copy_clipboard_format(Vte.Format.TEXT)
+
+    def do_paste(self):
+        self.term.paste_clipboard()
+
+    def on_term_key(self, _term, event):
+        if event.type != Gdk.EventType.KEY_PRESS:
+            return False
+        kv = event.keyval
+        mods = event.state & (
+            Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK
+        )
+        ctrl = Gdk.ModifierType.CONTROL_MASK
+        shift = Gdk.ModifierType.SHIFT_MASK
+        if mods == (ctrl | shift) and kv in (Gdk.KEY_C, Gdk.KEY_c):
+            self.do_copy()
+            return True
+        if mods == (ctrl | shift) and kv in (Gdk.KEY_V, Gdk.KEY_v):
+            self.do_paste()
+            return True
+        if kv == Gdk.KEY_Insert and mods in (shift, ctrl):
+            if mods == shift:
+                self.do_paste()
+            else:
+                self.do_copy()
+            return True
+        return False
+
+    def _build_ctx_menu(self):
+        menu = Gtk.Menu()
+        mi_copy = Gtk.MenuItem.new_with_label("Copiar")
+        mi_copy.connect("activate", lambda *_: self.do_copy())
+        mi_paste = Gtk.MenuItem.new_with_label("Pegar")
+        mi_paste.connect("activate", lambda *_: self.do_paste())
+        for mi in (mi_copy, mi_paste):
+            menu.append(mi)
+        menu.show_all()
+        return menu
+
+    def on_term_button(self, term, event):
+        if event.type != Gdk.EventType.BUTTON_PRESS or event.button != 3:
+            return False
+        if not hasattr(self, "_ctx_menu") or self._ctx_menu is None:
+            self._ctx_menu = self._build_ctx_menu()
+        menu = self._ctx_menu
+        menu.set_screen(term.get_screen())
+        menu.popup_at_pointer(event)
+        return True
 
     # ---------- aspecto ----------
 
@@ -424,21 +508,31 @@ class DropWindow(Gtk.ApplicationWindow):
         self.update_state()
         return False
 
-    def on_focus_out(self, *_):
-        if Gtk.grab_get_current() is not None:
-            # Menú contextual (copiar/pegar) abierto: decide al cerrarlo.
-            GLib.timeout_add(200, self._deferred_autohide)
-            return False
-        if OC.load_settings().get("autohide", True) and time.monotonic() > self._grace_until:
-            self.hide()
-        return False
+    def _active_window_xid(self):
+        try:
+            out = subprocess.check_output(
+                ["xprop", "-root", "_NET_ACTIVE_WINDOW"],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+            m = re.search(r"window id # (0x[0-9a-fA-F]+)", out)
+            return int(m.group(1), 16) if m else 0
+        except (OSError, subprocess.SubprocessError):
+            return -1
 
-    def _deferred_autohide(self):
-        if Gtk.grab_get_current() is not None:
-            return True
+    def on_focus_out(self, *_):
         if not self.get_visible():
             return False
-        if OC.load_settings().get("autohide", True) and not self.is_active():
+        # Los popups (menú contextual de VTE) roban el foco en XWayland sin
+        # grab de GTK y sin ser la ventana activa: no cuentan como pérdida.
+        active = self._active_window_xid()
+        mine = self.get_window().get_xid() if self.get_window() else 0
+        if (
+            active > 0
+            and active != mine
+            and OC.load_settings().get("autohide", True)
+            and time.monotonic() > self._grace_until
+        ):
             self.hide()
         return False
 
