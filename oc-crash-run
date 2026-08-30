@@ -42,17 +42,17 @@ Evidencia:
 ```
 
 Usa la skill `ubuntu-operator` (sección de *crash forensics* de Ubuntu):
-evidencia primero, contrasta `journalctl -k` y, si aporta, `/var/crash` y
-`coredumpctl`; descarta agotamiento de recursos (OOM) antes de culpar al
-programa; correlaciona la marca temporal con mtimes y actualizaciones
-recientes. DIAGNÓSTICO SOLO: no modifiques nada del sistema.
+evidencia primero, contrasta `journalctl -k` y, si aporta, `/var/crash`.
+DIAGNÓSTICO SOLO: no modifiques nada. **Sé breve y directo**: como mucho 3 o 4
+comandos de lectura; no rebusques más allá de lo obvio. Si con la evidencia ya
+está claro, respóndeme sin ejecutar nada.
 
-Devuelve el informe en ESPAÑOL con exactamente este formato:
+Devuelve el informe en ESPAÑOL, corto, con exactamente este formato:
 1. Qué pasó — una frase (qué murió, cuándo, señal/evento).
-2. Evidencia — las líneas textuales relevantes (tacha secretos).
-3. Causa probable — ranking; di qué está PROBADO y qué es INFERIDO.
-4. Arreglo — opciones de la más segura a la más invasiva, cada una con su reversión.
-5. Cómo evitarlo — el arreglo duradero (config, driver, límite o hardware).
+2. Evidencia — solo las líneas clave (tacha secretos).
+3. Causa probable — 1-3 frases; di qué es PROBADO y qué INFERIDO.
+4. Arreglo — hasta 2 opciones (más segura primero) con su reversión.
+5. Cómo evitarlo — una línea.
 """
 
 
@@ -135,7 +135,7 @@ def main():
     ap.add_argument("--kind")
     ap.add_argument("--pid")
     ap.add_argument("--evidence", help="evidencia en bruto (si no hay --pack)")
-    ap.add_argument("--timeout", default=300, type=int)
+    ap.add_argument("--timeout", default=600, type=int)
     args = ap.parse_args()
 
     cfg = OC.load_settings()

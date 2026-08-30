@@ -6,6 +6,9 @@ PartOf=graphical-session.target
 [Service]
 Type=simple
 ExecStart=%h/.local/bin/oc-crash-watch
+# El notify-send del watcher necesita el bus y la pantalla de la sesión.
+Environment=DISPLAY=:0
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
 Restart=always
 RestartSec=10
 # El binario decide en cada pasada si `crash_watch` está activo.
