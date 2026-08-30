@@ -3,6 +3,27 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.0] - 2026-08-30
+
+### Corregido
+
+- El pegado y copiado por fin responden a lo que se usa a diario: `Ctrl+V`
+  para pegar y `Ctrl+C` para copiar **solo cuando hay selección** (si no,
+  `Ctrl+C` sigue interrumpiendo al agente). Se conservan `Ctrl+Shift+C/V`,
+  `Shift+Insert`/`Ctrl+Insert` y el menú del clic derecho. Antes solo se
+  escuchaba `Ctrl+Shift+…`, así que `Ctrl+V` no hacía nada.
+
+### Añadido
+
+- El pegado lee el portapapeles con `Gtk.Clipboard` y lo inserta como pegado
+  de terminal (`paste_text`), más robusto bajo XWayland.
+- Se versiona en el repo la skill `ubuntu-operator`, con protocolo de
+  diagnóstico de crashes **del sistema Ubuntu** (apport + journald) siguiendo
+  el patrón `diagnose-crash` de Omarchy: evidencia primero, diagnosticar sin
+  tocar, no inventar símbolos, informe en español y segunda terminal si hay
+  algo trabajando. (Su carga exclusiva en el panel y el watcher automático
+  llegan en la 1.3.0.)
+
 ## [1.0.2] - 2026-08-30
 
 ### Añadido
@@ -85,6 +106,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.2.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.2.0
 [1.0.2]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.0.2
 [1.0.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.0.1
 [1.0.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.0.0

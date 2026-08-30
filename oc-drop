@@ -286,21 +286,32 @@ class DropWindow(Gtk.ApplicationWindow):
             self.term.copy_clipboard_format(Vte.Format.TEXT)
 
     def do_paste(self):
-        self.term.paste_clipboard()
+        cb = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        try:
+            text = cb.wait_for_text()
+        except Exception:  # noqa: BLE001
+            text = None
+        if text:
+            self.term.paste_text(text)
+        else:
+            self.term.paste_clipboard()
 
     def on_term_key(self, _term, event):
         if event.type != Gdk.EventType.KEY_PRESS:
             return False
         kv = event.keyval
-        mods = event.state & (
-            Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK
-        )
         ctrl = Gdk.ModifierType.CONTROL_MASK
         shift = Gdk.ModifierType.SHIFT_MASK
-        if mods == (ctrl | shift) and kv in (Gdk.KEY_C, Gdk.KEY_c):
-            self.do_copy()
-            return True
-        if mods == (ctrl | shift) and kv in (Gdk.KEY_V, Gdk.KEY_v):
+        mods = event.state & (ctrl | shift)
+        if kv in (Gdk.KEY_C, Gdk.KEY_c):
+            if mods == (ctrl | shift):
+                self.do_copy()
+                return True
+            if mods == ctrl and self.term.get_has_selection():
+                self.do_copy()
+                return True
+            return False
+        if kv in (Gdk.KEY_V, Gdk.KEY_v) and mods in (ctrl, ctrl | shift):
             self.do_paste()
             return True
         if kv == Gdk.KEY_Insert and mods in (shift, ctrl):
