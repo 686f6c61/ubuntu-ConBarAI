@@ -244,7 +244,14 @@ class DropWindow(Gtk.ApplicationWindow):
         self.term.connect("button-press-event", self.on_term_button)
         self.term.connect("key-press-event", self.on_term_key)
         self._setup_clipboard_dnd()
-        card.pack_start(self.term, True, True, 0)
+
+        self.pane = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
+        self.pane.pack1(self.term, resize=True, shrink=False)
+        self.diag_term = None
+        self.diag_box = None
+        self.pane.pack2(self._build_diag(), resize=False, shrink=True)
+        card.pack_start(self.pane, True, True, 0)
+        self._diag_max_mtime = self._crash_latest_mtime()
 
         self.add(card)
         self._apply_look(force=True)
@@ -343,6 +350,110 @@ class DropWindow(Gtk.ApplicationWindow):
         menu.popup_at_pointer(event)
         return True
 
+    # ---------- consola de diagnóstico (segunda terminal) ----------
+
+    def _build_diag(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        head.get_style_context().add_class("drop-head")
+        lbl = Gtk.Label(label="  Diagnóstico de crash", halign=Gtk.Align.START)
+        lbl.get_style_context().add_class("drop-title")
+        head.pack_start(lbl, True, True, 0)
+        btn = Gtk.Button()
+        btn.add(
+            Gtk.Image.new_from_icon_name("window-close-symbolic", Gtk.IconSize.MENU)
+        )
+        btn.get_style_context().add_class("hdr-btn")
+        btn.set_tooltip_text("Cerrar diagnóstico")
+        btn.connect("clicked", lambda *_: self.close_diag())
+        head.pack_end(btn, False, False, 0)
+        box.pack_start(head, False, False, 0)
+        self.diag_term = Vte.Terminal()
+        self.diag_term.set_scrollback_lines(5000)
+        self.diag_term.connect("child-exited", lambda *_: self._diag_closed())
+        box.pack_start(self.diag_term, True, True, 0)
+        box.set_no_show_all(True)
+        box.hide()
+        self.diag_box = box
+        return box
+
+    def _crash_latest_mtime(self):
+        try:
+            reports = list(OC.CRASH_DIR.glob("*report.md"))
+            return max((f.stat().st_mtime for f in reports), default=0.0)
+        except OSError:
+            return 0.0
+
+    def check_new_report(self):
+        """Si ha llegado un informe nuevo y el panel está a la vista, lo abre
+        en la segunda terminal, sin molestar la sesión de arriba."""
+        latest = self._crash_latest_mtime()
+        if latest <= self._diag_max_mtime:
+            return False
+        try:
+            rep = max(
+                OC.CRASH_DIR.glob("*report.md"),
+                key=lambda f: f.stat().st_mtime,
+            )
+        except ValueError:
+            rep = None
+        self._diag_max_mtime = latest
+        if rep is not None and self.get_visible():
+            self.open_diag(str(rep))
+            return True
+        return False
+
+    def open_diag(self, report_path):
+        if self.diag_term is None or self.diag_box is None:
+            return
+        if not self.diag_box.get_visible():
+            self.diag_box.show_all()
+            h = self.get_allocated_height() or 600
+            self.pane.set_position(max(160, h // 3))
+        env = os.environ.copy()
+        env.setdefault("TERM", "xterm-256color")
+        env_list = [f"{k}={v}" for k, v in env.items()]
+        q = shlex.quote(report_path)
+        script = (
+            "if command -v glow >/dev/null 2>&1; then glow -p {p} 2>/dev/null || cat {p}; "
+            "else cat {p}; fi; "
+            "printf '\\n[diag] informe mostrado. Investiga a mano; Ctrl-D cierra.\\n'; "
+            "exec bash -i"
+        ).format(p=q)
+        argv = ["bash", "-lc", script]
+        try:
+            self.diag_term.spawn_async(
+                Vte.PtyFlags.DEFAULT, self.workdir, argv, env_list,
+                GLib.SpawnFlags.DEFAULT, None, -1, None, None,
+            )
+        except TypeError:
+            self.diag_term.spawn_async(
+                Vte.PtyFlags.DEFAULT, self.workdir, argv, env_list,
+                GLib.SpawnFlags.DEFAULT, None, None, -1, None, None,
+            )
+        except (GLib.Error, OSError) as e:
+            OC.log("no se pudo abrir la consola de diagnóstico:", e)
+            return
+        self.diag_term.grab_focus()
+
+    def close_diag(self):
+        if self.diag_term is not None:
+            try:
+                self.diag_term.feed_child(b"\x04\x04")
+            except Exception:  # noqa: BLE001
+                pass
+        if self.diag_box is not None:
+            self.diag_box.hide()
+
+    def _diag_closed(self):
+        if self.diag_term is not None:
+            try:
+                self.diag_term.reset(True, True)
+            except Exception:  # noqa: BLE001
+                pass
+        if self.diag_box is not None:
+            self.diag_box.hide()
+
     # ---------- aspecto ----------
 
     def _apply_look(self, force=False):
@@ -368,6 +479,13 @@ class DropWindow(Gtk.ApplicationWindow):
             rgba(theme["bg"], 0.0),
             [rgba(c) for c in theme["palette"]],
         )
+        if self.diag_term is not None:
+            self.diag_term.set_font(Pango.FontDescription(f"{fam} {s['font_size']}"))
+            self.diag_term.set_colors(
+                rgba(theme["fg"]),
+                rgba(theme["bg"], 0.0),
+                [rgba(c) for c in theme["palette"]],
+            )
 
     # ---------- sesión ----------
 
@@ -622,6 +740,7 @@ class DropApp(Gtk.Application):
             win.update_state()
             if refresh_usage:
                 win.update_usage()
+            win.check_new_report()
         return True
 
 
