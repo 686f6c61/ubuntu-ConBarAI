@@ -8,6 +8,7 @@ la sesión vive aunque ocultes el panel.
 Uso:
   oc-drop                         abre/oculta el panel por defecto
   oc-drop --session N [--workdir R]  panel de una sesión concreta
+  oc-drop --hide                  oculta los paneles (Súper+Q lo usa)
   oc-drop --quit                  cierra todos los paneles (tmux sigue vivo)
 """
 
@@ -205,6 +206,7 @@ class DiagWindow(Gtk.Window):
         self.term = Vte.Terminal()
         self.term.set_scrollback_lines(5000)
         self.term.connect("child-exited", lambda *a: self.finish())
+        self.term.connect("key-press-event", self.on_key)
         card.pack_start(self.term, True, True, 0)
         self.add(card)
         self.child_pid = -1
@@ -226,6 +228,16 @@ class DiagWindow(Gtk.Window):
         GLib.timeout_add(250, self._assert_place)
         self._spawn(prompt)
         self.term.grab_focus()
+
+    def on_key(self, _term, event):
+        if event.type != Gdk.EventType.KEY_PRESS:
+            return False
+        if event.keyval in (Gdk.KEY_q, Gdk.KEY_Q) and (
+            event.state & Gdk.ModifierType.SUPER_MASK
+        ):
+            self.finish()
+            return True
+        return False
 
     def _style(self):
         s = OC.load_settings()
@@ -580,6 +592,11 @@ class DropWindow(Gtk.ApplicationWindow):
         if event.type != Gdk.EventType.KEY_PRESS:
             return False
         kv = event.keyval
+        if kv in (Gdk.KEY_q, Gdk.KEY_Q) and (
+            event.state & Gdk.ModifierType.SUPER_MASK
+        ):
+            self.hide()
+            return True
         ctrl = Gdk.ModifierType.CONTROL_MASK
         shift = Gdk.ModifierType.SHIFT_MASK
         mods = event.state & (ctrl | shift)
@@ -925,6 +942,7 @@ class DropApp(Gtk.Application):
         args = list(command_line.get_arguments())[1:]
         session = workdir = None
         quit_all = False
+        hide_all = False
         i = 0
         while i < len(args):
             if args[i] == "--session" and i + 1 < len(args):
@@ -936,8 +954,17 @@ class DropApp(Gtk.Application):
             elif args[i] == "--quit":
                 quit_all = True
                 i += 1
+            elif args[i] == "--hide":
+                hide_all = True
+                i += 1
             else:
                 i += 1
+        if hide_all:
+            for win in list(self.windows.values()):
+                if win.diag_win is not None:
+                    win.diag_win.finish()
+                win.hide()
+            return 0
         if quit_all:
             for win in list(self.windows.values()):
                 win.destroy()

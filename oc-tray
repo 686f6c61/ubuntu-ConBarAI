@@ -34,6 +34,7 @@ BIN_APP = str(Path.home() / ".local/bin/conbarai")
 SCHEMA_MEDIA = "org.gnome.settings-daemon.plugins.media-keys"
 SCHEMA_CHILD = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding"
 KEY_PATH = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
+KEY_PATH_HIDE = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/conbarai-hide/"
 
 THEME_LABELS = {
     "tokyo-night": "Tokyo Night",
@@ -100,19 +101,24 @@ def apply_keybinding(binding):
         if re.match(r"^/org/gnome/settings-daemon/plugins/media-keys/", i)
     ]
     if binding:
-        if KEY_PATH not in items:
-            items.append(KEY_PATH)
+        for ruta in (KEY_PATH, KEY_PATH_HIDE):
+            if ruta not in items:
+                items.append(ruta)
         newlist = "[" + ", ".join(f"'{i}'" for i in items) + "]"
         gsettings_set(SCHEMA_MEDIA, "custom-keybindings", newlist)
         gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH}", "name", "OpenCode flotante")
         gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH}", "command", BIN_APP)
         gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH}", "binding", binding)
-    elif KEY_PATH in items:
-        items = [i for i in items if i != KEY_PATH]
+        gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH_HIDE}", "name", "ConBarAI ocultar")
+        gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH_HIDE}", "command", f"{BIN_DROP} --hide")
+        gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH_HIDE}", "binding", "<Super>q")
+    elif KEY_PATH in items or KEY_PATH_HIDE in items:
+        items = [i for i in items if i not in (KEY_PATH, KEY_PATH_HIDE)]
         newlist = "[" + ", ".join(f"'{i}'" for i in items) + "]"
         gsettings_set(SCHEMA_MEDIA, "custom-keybindings", newlist)
-        for key in ("name", "command", "binding"):
-            gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH}", key, "")
+        for ruta in (KEY_PATH, KEY_PATH_HIDE):
+            for key in ("name", "command", "binding"):
+                gsettings_set(f"{SCHEMA_CHILD}:{ruta}", key, "")
 
 
 TERMINAL_CANDIDATES = (
@@ -214,6 +220,7 @@ def help_markup(theme):
 
 {s("SINOPSIS")}
     {k("Súper+Intro")}                      abrir u ocultar el panel
+    {k("Súper+Q")}                          ocultar panel y consola
     {c("$ conbarai")}                       la app completa (tray + panel)
     {c("$ conbarai --update")}              actualizar a la última release
     {c("$ oc-drop")} [{k("--workdir")} RUTA]      panel de una carpeta concreta

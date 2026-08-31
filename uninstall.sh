@@ -68,7 +68,10 @@ import subprocess
 
 SCHEMA = "org.gnome.settings-daemon.plugins.media-keys"
 CHILD = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding"
-KEY = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
+KEYS = [
+    "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/",
+    "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/conbarai-hide/",
+]
 
 
 def gset(schema, key, value):
@@ -85,12 +88,13 @@ items = [
     i for i in re.findall(r"['\"]([^'\"]+)['\"]", raw)
     if re.match(r"^/org/gnome/settings-daemon/plugins/media-keys/", i)
 ]
-if KEY in items:
-    items = [i for i in items if i != KEY]
+if any(k in items for k in KEYS):
+    items = [i for i in items if i not in KEYS]
     gset(SCHEMA, "custom-keybindings", "[" + ", ".join(f"'{i}'" for i in items) + "]")
-    for k in ("name", "command", "binding"):
-        gset(f"{CHILD}:{KEY}", k, "")
-    print("[OK] Atajo de teclado retirado")
+    for ruta in KEYS:
+        for k in ("name", "command", "binding"):
+            gset(f"{CHILD}:{ruta}", k, "")
+    print("[OK] Atajos de teclado retirados")
 EOF
 
 echo

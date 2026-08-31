@@ -3,6 +3,23 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.7] - 2026-08-31
+
+### Añadido
+
+- **Súper+Q oculta el panel y cierra la consola de diagnóstico**, por
+  dos vías que se refuerzan: atajo global de GNOME (`<Super>q` →
+  `oc-drop --hide`, funciona esté donde esté el foco; se registra y
+  retira junto al atajo principal) y tecla dentro del propio panel y de
+  la consola. Nuevo modo `oc-drop --hide`.
+
+### Verificado
+
+- Tema y transparencia también se aplican en vivo (mismo mecanismo que
+  el tamaño de la 1.5.5): comprobado con captura de píxeles reales —
+  fondo Tokyo Night (26,27,38) → elegir Dracula sin reabrir →
+  (39,41,53), el color exacto del tema.
+
 ## [1.5.6] - 2026-08-31
 
 ### Corregido
@@ -351,6 +368,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.7]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.7
 [1.5.6]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.6
 [1.5.5]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.5
 [1.5.4]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.4
