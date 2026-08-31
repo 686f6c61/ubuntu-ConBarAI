@@ -3,6 +3,30 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.6] - 2026-08-31
+
+### Corregido
+
+- **El aviso de versión nueva podía tardar horas**: la comprobación era
+  cada 6 h, así que estando en la 1.5.4 la 1.5.5 no se anunciaba hasta la
+  siguiente ventana. Ahora se comprueba al arrancar y cada 15 minutos.
+- El atajo global (Súper+Intro) lanzaba solo el panel: si el icono de la
+  barra no estaba, no lo revivía. Ahora lanza la app completa
+  (`conbarai`).
+- "Terminal del sistema" cascaba (KeyError) con un terminal configurado
+  fuera de la lista conocida; ahora se lanza tal cual como reserva.
+- Pulsar dos veces "Actualizar a vX.Y.Z" podía lanzar dos
+  actualizaciones a la vez; la entrada se retira al lanzar la primera.
+
+### Cambiado
+
+- **Auditoría completa previa a esta versión**: constructor real y las
+  33 entradas y subentradas del menú del tray activadas una a una con
+  entorno aislado (0 fallos), 18 flujos del panel (maximizar, nueva
+  sesión, consola de diagnóstico completa con procesado de informe,
+  autohide, ajustes en vivo, multipanel; 0 fallos), pasada del vigía,
+  shellcheck de los 4 scripts bash y 55 tests unitarios.
+
 ## [1.5.5] - 2026-08-31
 
 ### Corregido
@@ -327,6 +351,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.6]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.6
 [1.5.5]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.5
 [1.5.4]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.4
 [1.5.3]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.3

@@ -29,6 +29,7 @@ from gi.repository import AyatanaAppIndicator3, Gdk, GLib, Gtk  # noqa: E402
 import oc_common as OC  # noqa: E402
 
 BIN_DROP = str(Path.home() / ".local/bin/oc-drop")
+BIN_APP = str(Path.home() / ".local/bin/conbarai")
 
 SCHEMA_MEDIA = "org.gnome.settings-daemon.plugins.media-keys"
 SCHEMA_CHILD = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding"
@@ -104,7 +105,7 @@ def apply_keybinding(binding):
         newlist = "[" + ", ".join(f"'{i}'" for i in items) + "]"
         gsettings_set(SCHEMA_MEDIA, "custom-keybindings", newlist)
         gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH}", "name", "OpenCode flotante")
-        gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH}", "command", BIN_DROP)
+        gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH}", "command", BIN_APP)
         gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH}", "binding", binding)
     elif KEY_PATH in items:
         items = [i for i in items if i != KEY_PATH]
@@ -145,8 +146,9 @@ def open_system_terminal():
         "kitty": ["kitty", "--directory", wd],
         "xterm": ["xterm"],
         "x-terminal-emulator": ["x-terminal-emulator"],
-    }[term]
-    inherit_cwd = term in ("xterm", "x-terminal-emulator")
+    }.get(term, [term])
+    inherit_cwd = term in ("xterm", "x-terminal-emulator") or term not in (
+        "ghostty", "gnome-terminal", "konsole", "alacritty", "kitty")
     subprocess.Popen(
         args,
         cwd=wd if inherit_cwd else None,
@@ -262,7 +264,7 @@ def help_markup(theme):
     {k("Ocultar al perder el foco")}  autohide del panel
     {k("Arrancar al iniciar")}        autoarranque del icono
     {k("Avisar de versiones nuevas")} comprueba las releases al arrancar
-                               y cada 6 h; si hay una nueva, aparece
+                               y cada 15 min; si hay una nueva, aparece
                                {k("Actualizar a vX.Y.Z")} en el menú
     {k("Ayuda")}                      esta página {dim("(Esc para cerrar)")}
     {k("ConBarAI " + ver)}              abre el repositorio del proyecto
@@ -488,7 +490,7 @@ class Tray:
         GLib.timeout_add_seconds(2, self.on_poll)
         GLib.timeout_add(350, self.on_anim)
         GLib.timeout_add_seconds(20, self._check_update_once)
-        GLib.timeout_add_seconds(6 * 3600, self.check_update)
+        GLib.timeout_add_seconds(15 * 60, self.check_update)
 
     # ---------- encuesta ----------
     def on_poll(self):
@@ -554,10 +556,14 @@ class Tray:
 
     def on_update(self, *_):
         subprocess.Popen(
-            [str(Path.home() / ".local/bin/conbarai"), "--update"],
+            [BIN_APP, "--update"],
             start_new_session=True,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
+        # la actualización reinicia la app; retirar la entrada evita
+        # lanzarla dos veces mientras tanto
+        self._update_ver = None
+        self.rebuild_menu()
 
     # ---------- menú ----------
     def rebuild_menu(self):

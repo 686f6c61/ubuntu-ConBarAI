@@ -102,7 +102,7 @@ systemctl --user status oc-crash-watch
   or always start fresh.
 - **Hide on focus loss** and **Start on login**.
 - **Update to vX.Y.Z** — appears when a new release exists (checked on
-  start and every 6 h, can be disabled): one click downloads the
+  start and every 15 min, can be disabled): one click downloads the
   AppImage, updates and restarts the app. Also `conbarai --update`.
 - **Help** — a complete built-in manual, styled like a `man` page.
 - **ConBarAI x.y.z** — the installed version opens this repository.
@@ -221,7 +221,7 @@ attention), the working folder and the usage.
 | `font_size` | Font size | 7 - 16 |
 | `continue_session` | OpenCode starts with `-c` (resumes the last session). The "New session" button always starts fresh | true / false |
 | `diag_pos` | Position of the crash diagnostic console | `side` / `below` |
-| `update_check` | Announce new versions (checks the releases on start and every 6 h) | true / false |
+| `update_check` | Announce new versions (checks the releases on start and every 15 min) | true / false |
 | `crash_watch` | Watch for system crashes (kernel journal) | true / false |
 | `crash_analyze` | Analyze crashes with AI | true / false |
 | `crash_dedupe` | Per-program dedupe window (seconds) | integer |

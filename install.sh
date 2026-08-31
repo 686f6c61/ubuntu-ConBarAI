@@ -130,7 +130,7 @@ fi
 # --- [4/7] tipografía (look Omarchy): JetBrains Mono Nerd Font ---
 paso 4 "Tipografía JetBrains Mono Nerd"
 if fc-list 2>/dev/null | grep -qi "jetbrainsmono nerd font" \
-   || ls "$HOME/.local/share/fonts" 2>/dev/null | grep -qi "^JetBrainsMonoNerdFont-"; then
+   || compgen -G "$HOME/.local/share/fonts/JetBrainsMonoNerdFont-*" >/dev/null; then
   ok "Ya instalada"
 else
   info "No encontrada (~90 MB de descarga)."
