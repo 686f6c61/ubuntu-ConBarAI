@@ -3,6 +3,17 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.9] - 2026-08-31
+
+### Corregido
+
+- **El aviso de versión nueva ya no se puede perder**: era una
+  notificación efímera que saltaba una sola vez (a los 20 s de arrancar
+  el tray) y desaparecía si nadie miraba — verificado capturando el bus
+  en dos máquinas: el aviso salía, pero se esfumaba. Ahora es de
+  urgencia crítica (queda en pantalla hasta cerrarla) y se repite cada
+  6 h mientras la actualización siga pendiente.
+
 ## [1.5.8] - 2026-08-31
 
 ### Corregido
@@ -384,6 +395,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.9]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.9
 [1.5.8]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.8
 [1.5.7]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.7
 [1.5.6]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.6

@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import warnings
 from pathlib import Path
 
@@ -500,6 +501,7 @@ class Tray:
 
         GLib.timeout_add_seconds(2, self.on_poll)
         GLib.timeout_add(350, self.on_anim)
+        self._update_avisado = 0.0
         GLib.timeout_add_seconds(20, self._check_update_once)
         GLib.timeout_add_seconds(15 * 60, self.check_update)
 
@@ -553,11 +555,18 @@ class Tray:
         return True
 
     def _update_found(self, ver):
-        if ver != self._update_ver:
+        nueva = ver != self._update_ver
+        if nueva:
             self._update_ver = ver
             self.rebuild_menu()
+        # urgencia crítica: en GNOME queda en pantalla hasta cerrarla (un
+        # aviso efímero se perdía si nadie miraba); y se repite cada 6 h
+        # mientras la actualización siga pendiente
+        if nueva or time.time() - self._update_avisado > 6 * 3600:
+            self._update_avisado = time.time()
             subprocess.run(
-                ["notify-send", "--app-name", "ConBarAI",
+                ["notify-send", "--urgency", "critical",
+                 "--app-name", "ConBarAI",
                  f"ConBarAI v{ver} disponible",
                  "Actualiza desde el menú del icono (o con: conbarai --update)."],
                 check=False,
