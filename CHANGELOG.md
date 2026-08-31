@@ -19,6 +19,12 @@ y adherido al [Versionado Semántico](https://semver.org/lang/es/).
   comandos, se escribe con lo que haya), y los comandos compuestos
   denegados por la config de solo lectura se parten en simples y se sigue.
   Corrige el caso real de un análisis que terminó sin conclusiones.
+- **ConBarAI se comporta como una app de verdad**: la entrada del menú de
+  Aplicaciones lanza la app completa con el nuevo lanzador `conbarai`
+  (icono de la barra + vigía + panel; antes solo abría el panel y el
+  icono no aparecía), y **Salir** sale de verdad — cierra panel, sesiones
+  de OpenCode y vigía, con confirmación. Al reabrir, `-c` retoma la
+  conversación donde estaba.
 
 ## [1.4.0] - 2026-08-30
 

@@ -2,6 +2,7 @@
 
 import json
 import py_compile
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -301,6 +302,12 @@ def test_scripts_compilan(tmp_path):
 
 
 # ---------- petición de análisis pendiente (watcher -> panel) ----------
+
+
+def test_scripts_bash_validos():
+    root = Path(__file__).resolve().parents[1]
+    for name in ("conbarai", "install.sh", "uninstall.sh"):
+        subprocess.run(["bash", "-n", str(root / name)], check=True)
 
 
 def test_crash_pending_roundtrip(tmp_path, monkeypatch):

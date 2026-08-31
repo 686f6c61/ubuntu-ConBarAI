@@ -211,6 +211,7 @@ def help_markup(theme):
 
 {s("SINOPSIS")}
     {k("Súper+Intro")}                      abrir u ocultar el panel
+    {c("$ conbarai")}                       la app completa (tray + panel)
     {c("$ oc-drop")} [{k("--workdir")} RUTA]      panel de una carpeta concreta
     {c("$ oc-drop --quit")}                 cerrar paneles (tmux sigue vivo)
     {c("$ oc-crash-watch --once")}          una pasada de detección
@@ -260,7 +261,9 @@ def help_markup(theme):
     {k("Arrancar al iniciar")}        autoarranque del icono
     {k("Ayuda")}                      esta página {dim("(Esc para cerrar)")}
     {k("ConBarAI " + ver)}              abre el repositorio del proyecto
-    {k("Salir")}                      cierra el icono de la barra
+    {k("Salir")}                      cierra la app entera: panel,
+                               sesiones y vigía {dim("(al reabrir, -c")}
+                               {dim("retoma la conversación)")}
 
 {s("DIAGNÓSTICO DE CRASHES")}
     1. El vigía {dim("(oc-crash-watch, servicio de usuario)")} lee el journal
@@ -616,7 +619,8 @@ class Tray:
         menu.append(item_ver)
 
         item_quit = icon_item("Salir", ["application-exit-symbolic"])
-        item_quit.connect("activate", lambda *_: Gtk.main_quit())
+        item_quit.set_tooltip_text("Cierra la app completa: panel, sesiones y vigía")
+        item_quit.connect("activate", self.on_quit)
         menu.append(item_quit)
 
         menu.show_all()
@@ -827,6 +831,40 @@ class Tray:
 
     def _help_closed(self, *_):
         self._help_win = None
+
+    def on_quit(self, *_):
+        """Salir de verdad: panel, sesiones de OpenCode, vigía e icono.
+        Con continue_session activo, OpenCode retoma la conversación al
+        volver a abrir la app (-c)."""
+        confirm = Gtk.MessageDialog(
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.YES_NO,
+            text="Salir de ConBarAI",
+        )
+        confirm.format_secondary_text(
+            "Se cierran el panel, las sesiones de OpenCode y el vigía de "
+            "crashes. Con \"Abrir continuando la última sesión (-c)\" "
+            "activo, OpenCode retomará la conversación al volver a abrir."
+        )
+        ok = confirm.run() == Gtk.ResponseType.YES
+        confirm.destroy()
+        if not ok:
+            return
+        subprocess.run(
+            [BIN_DROP, "--quit"], check=False,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        for s in OC.managed_sessions():
+            subprocess.run(
+                ["tmux", "kill-session", "-t", s], check=False,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+        subprocess.run(
+            ["systemctl", "--user", "stop", "oc-crash-watch.service"],
+            check=False,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        Gtk.main_quit()
 
     def on_autostart(self, *_):
         enabled = OC.set_autostart(not OC.autostart_enabled())

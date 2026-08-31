@@ -167,6 +167,7 @@ ok "Carpeta de trabajo: $WORKDIR ${DIM}(cambiable en el tray: Carpeta de trabajo
 
 # --- [6/7] enlaces, skill, escritorio y ajustes ---
 paso 6 "Enlaces, skill y ajustes"
+ln -sf "$DIR/conbarai" "$BIN/conbarai"
 ln -sf "$DIR/oc-drop" "$BIN/oc-drop"
 ln -sf "$DIR/oc-tray" "$BIN/oc-tray"
 ln -sf "$DIR/oc-crash-watch" "$BIN/oc-crash-watch"
@@ -252,6 +253,7 @@ echo
 echo "${DIM}──────────────────────────────────────────────────────────────${RST}"
 ok "${NEG}ConBarAI v${VERSION} instalado${RST}"
 echo
+echo "  ${NEG}App${RST}        conbarai           ${DIM}también en el menú de Aplicaciones${RST}"
 echo "  ${NEG}Panel${RST}      oc-drop            ${DIM}atajo según settings.json (Súper+Intro)${RST}"
 echo "  ${NEG}Tray${RST}       oc-tray            ${DIM}icono en la barra; Ayuda en su menú${RST}"
 echo "  ${NEG}Vigía${RST}      oc-crash-watch     ${DIM}crashes del sistema, avisa y analiza${RST}"

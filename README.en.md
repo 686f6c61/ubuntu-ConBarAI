@@ -103,6 +103,8 @@ systemctl --user status oc-crash-watch
 - **Hide on focus loss** and **Start on login**.
 - **Help** — a complete built-in manual, styled like a `man` page.
 - **ConBarAI x.y.z** — the installed version opens this repository.
+- **Quit** — closes the whole app: panel, sessions and watcher (on
+  relaunch, OpenCode resumes the conversation with `-c`).
 
 <br clear="right">
 
@@ -143,6 +145,7 @@ Then log out and back in (or run `oc-tray`) to see the icon in the bar.
 
 | Action | Result |
 | --- | --- |
+| Applications → ConBarAI (or `conbarai`) | Opens the whole app: tray, watcher and panel |
 | `Super+Enter` (or the configured shortcut) | Opens or hides the panel |
 | Tray icon | Full menu (see above) |
 | Reload button in the header | New session (OpenCode from scratch, no `-c`) |

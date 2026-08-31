@@ -99,6 +99,8 @@ systemctl --user status oc-crash-watch
 - **Ocultar al perder el foco** y **Arrancar al iniciar el sistema**.
 - **Ayuda** — manual completo integrado, con estética de página `man`.
 - **ConBarAI x.y.z** — la versión instalada abre este repositorio.
+- **Salir** — cierra la app completa: panel, sesiones y vigía (al
+  reabrir, OpenCode retoma la conversación con `-c`).
 
 <br clear="right">
 
@@ -140,6 +142,7 @@ icono en la barra.
 
 | Acción | Resultado |
 | --- | --- |
+| Aplicaciones → ConBarAI (o `conbarai`) | Abre la app completa: icono, vigía y panel |
 | `Súper+Intro` (o el atajo configurado) | Abre u oculta el panel |
 | Icono del tray | Menú completo (ver arriba) |
 | Botón de recarga en la cabecera | Nueva sesión (OpenCode de cero, sin `-c`) |

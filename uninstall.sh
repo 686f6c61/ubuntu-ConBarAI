@@ -50,7 +50,8 @@ if command -v systemctl >/dev/null 2>&1; then
   ok "Servicio oc-crash-watch retirado"
 fi
 
-rm -f "$HOME/.local/bin/oc-drop" "$HOME/.local/bin/oc-tray" \
+rm -f "$HOME/.local/bin/conbarai" \
+      "$HOME/.local/bin/oc-drop" "$HOME/.local/bin/oc-tray" \
       "$HOME/.local/bin/oc-crash-watch" "$HOME/.local/bin/oc-crash-run"
 rm -rf "$HOME/.local/share/oc-drop" "$HOME/.config/oc-drop" "$HOME/.local/state/oc-drop"
 rm -f "$HOME/.config/autostart/oc-tray.desktop"

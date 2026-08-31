@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# ConBarAI - lanzador de la app completa.
+# Arranca el icono de la barra y el vigía si no están, y abre/oculta el
+# panel. Es lo que ejecuta la entrada del menú de Aplicaciones; también
+# sirve desde terminal: `conbarai [--workdir RUTA | --quit]`.
+set -u
+
+BIN="$HOME/.local/bin"
+
+# Icono de la barra (si no está ya)
+if ! pgrep -f "$BIN/oc-tray" >/dev/null 2>&1; then
+  setsid "$BIN/oc-tray" >/dev/null 2>&1 &
+fi
+
+# Vigía de crashes, solo si el ajuste lo pide
+if command -v systemctl >/dev/null 2>&1; then
+  if python3 -c "import json,sys; sys.exit(0 if json.load(open('$HOME/.config/oc-drop/settings.json')).get('crash_watch', True) else 1)" 2>/dev/null; then
+    systemctl --user start oc-crash-watch.service 2>/dev/null || true
+  fi
+fi
+
+# Panel (abre u oculta; --quit cierra todos los paneles)
+exec "$BIN/oc-drop" "$@"
