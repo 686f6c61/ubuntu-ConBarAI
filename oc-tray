@@ -272,9 +272,12 @@ def help_markup(theme):
                                arrancar; desmarcada: siempre de cero
     {k("Ocultar al perder el foco")}  autohide del panel
     {k("Arrancar al iniciar")}        autoarranque del icono
-    {k("Avisar de versiones nuevas")} comprueba las releases al arrancar
-                               y cada 15 min; si hay una nueva, aparece
-                               {k("Actualizar a vX.Y.Z")} en el menú
+    {k("Buscar actualizaciones")}     comprueba ahora la última release y
+                               contesta siempre (al día, nueva o sin
+                               red); si hay versión nueva, la entrada
+                               pasa a ser {k("Actualizar a vX.Y.Z")}
+    {k("Avisar de versiones nuevas")} comprobación automática al arrancar
+                               y cada 15 min, con notificación
     {k("Ayuda")}                      esta página {dim("(Esc para cerrar)")}
     {k("ConBarAI " + ver)}              abre el repositorio del proyecto
     {k("Salir")}                      cierra la app entera: panel,
@@ -565,6 +568,32 @@ class Tray:
             )
         return False
 
+    def on_check_manual(self, *_):
+        """Comprobación a demanda, con respuesta siempre (haya o no
+        versión nueva, o falle la red). Ignora update_check: es un acto
+        explícito del usuario."""
+        def worker():
+            ver = OC.latest_release_version()
+            GLib.idle_add(self._manual_result, ver)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _manual_result(self, ver):
+        actual = OC.app_version()
+        if ver and OC.version_newer(ver, actual):
+            self._update_found(ver)
+            return False
+        if ver:
+            cuerpo = f"Estás en la última versión (v{actual})."
+        else:
+            cuerpo = "No se pudo comprobar la última release (¿sin red?)."
+        subprocess.run(
+            ["notify-send", "--app-name", "ConBarAI", "Actualizaciones", cuerpo],
+            check=False,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        return False
+
     def on_update(self, *_):
         subprocess.Popen(
             [BIN_APP, "--update"],
@@ -680,6 +709,8 @@ class Tray:
         item_help.connect("activate", self.on_help)
         menu.append(item_help)
 
+        # Zona de actualizaciones SIEMPRE visible: o hay una pendiente, o
+        # se puede comprobar a mano (con respuesta en ambos casos)
         if getattr(self, "_update_ver", None):
             item_up = icon_item(
                 f"Actualizar a v{self._update_ver}",
@@ -687,7 +718,14 @@ class Tray:
             )
             item_up.set_tooltip_text("Descarga la release nueva y reinicia la app")
             item_up.connect("activate", self.on_update)
-            menu.append(item_up)
+        else:
+            item_up = icon_item(
+                "Buscar actualizaciones",
+                ["software-update-available-symbolic", "view-refresh-symbolic"],
+            )
+            item_up.set_tooltip_text("Comprueba ahora la última release publicada")
+            item_up.connect("activate", self.on_check_manual)
+        menu.append(item_up)
 
         ver = OC.app_version()
         item_ver = icon_item(
