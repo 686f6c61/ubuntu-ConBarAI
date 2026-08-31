@@ -3,6 +3,19 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.9] - 2026-08-31
+
+### Añadido
+
+- **Zona de actualizaciones siempre visible en el menú**: antes la
+  entrada "Actualizar a vX.Y.Z" solo existía si el chequeo automático
+  había detectado algo — al día no había NINGUNA zona, y no se podía ni
+  comprobar a mano ni distinguir "estoy al día" de "esto no funciona".
+  Ahora, sin pendiente aparece "Buscar actualizaciones" (comprueba al
+  momento y contesta siempre: al día / versión nueva / sin red), y con
+  pendiente, "Actualizar a vX.Y.Z". Verificado inspeccionando el menú
+  real en los cuatro estados.
+
 ## [1.5.8] - 2026-08-31
 
 ### Corregido
@@ -384,6 +397,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.9]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.9
 [1.5.8]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.8
 [1.5.7]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.7
 [1.5.6]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.6
