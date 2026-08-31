@@ -224,8 +224,8 @@ La cabecera muestra un punto verde (sesión viva), rojo (muerta) o ámbar
 | `crash_dedupe` | Ventana de deduplicación por programa (segundos) | entero |
 | `crash_poll` | Intervalo de sondeo del vigía (segundos) | entero |
 
-Los cambios de tamaño y transparencia se aplican la próxima vez que se
-abre el panel.
+Los cambios de tamaño, transparencia, tema y tipografía se aplican al
+momento, aunque el panel esté a la vista.
 
 ## Seguridad y confianza
 

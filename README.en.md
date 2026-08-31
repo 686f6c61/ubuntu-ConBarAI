@@ -227,7 +227,8 @@ attention), the working folder and the usage.
 | `crash_dedupe` | Per-program dedupe window (seconds) | integer |
 | `crash_poll` | Watcher poll interval (seconds) | integer |
 
-Size and transparency changes apply the next time the panel opens.
+Size, transparency, theme and font changes apply immediately, even
+while the panel is visible.
 
 ## Security and trust
 

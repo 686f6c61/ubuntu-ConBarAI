@@ -1,6 +1,6 @@
 [project]
 name = "conbarai"
-version = "1.5.4"
+version = "1.5.5"
 description = "Panel flotante estilo Omarchy con OpenCode para Ubuntu GNOME"
 requires-python = ">=3.10"
 license = { text = "MIT" }

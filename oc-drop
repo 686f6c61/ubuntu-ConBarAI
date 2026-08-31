@@ -451,6 +451,7 @@ class DropWindow(Gtk.ApplicationWindow):
         self._fresh_next = False
         self._grace_until = 0.0
         self._maximized = False
+        self._geo_key = None
         self._css_provider = None
         self._look_key = None
         self._busy = None
@@ -779,6 +780,19 @@ class DropWindow(Gtk.ApplicationWindow):
         u = OC.usage(self.workdir)
         self.usage.set_text(OC.format_usage(*u) if u else "")
 
+    def refresh_settings(self):
+        """Aplica en vivo los cambios del menú del icono (tema, opacidad,
+        tipografía y tamaño) sin tener que reabrir el panel."""
+        if not self.get_visible():
+            return
+        self._apply_look()
+        if self._maximized:
+            return
+        s = OC.load_settings()
+        geo = (s["width"], s["height"])
+        if self._geo_key is not None and geo != self._geo_key:
+            self.apply_geometry()
+
     # ---------- mostrar / ocultar ----------
 
     def show_drop(self):
@@ -814,6 +828,7 @@ class DropWindow(Gtk.ApplicationWindow):
         else:
             s = OC.load_settings()
             wf, hf = s["width"], s["height"]
+            self._geo_key = (wf, hf)
         card_w = int(wa_w * wf / f)
         card_h = int(wa_h * hf / f)
         self.resize(card_w + SHADOW_L + SHADOW_R, card_h + SHADOW_T + SHADOW_B)
@@ -961,6 +976,7 @@ class DropApp(Gtk.Application):
         refresh_usage = self._usage_tick % 8 == 0
         for win in list(self.windows.values()):
             win.update_state()
+            win.refresh_settings()
             if refresh_usage:
                 win.update_usage()
             win.check_new_report()

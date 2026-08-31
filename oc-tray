@@ -310,7 +310,7 @@ def help_markup(theme):
     {k("crash_poll")}        {v("segundos")}         cadencia del vigía {dim("(def. 8)")}
     {k("crash_dedupe")}      {v("segundos")}         dedupe por programa {dim("(def. 60)")}
 
-    Tamaño y transparencia se aplican al reabrir el panel.
+    Los ajustes se aplican al momento, con el panel a la vista.
 
 {s("ARCHIVOS")}
     {c("~/.config/oc-drop/settings.json")}      ajustes

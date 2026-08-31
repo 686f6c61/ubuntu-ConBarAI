@@ -3,6 +3,17 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.5] - 2026-08-31
+
+### Corregido
+
+- **Los ajustes del menú se aplican al momento**: cambiar tamaño,
+  transparencia, tema o tipografía no hacía nada aparente porque el panel
+  solo releía los ajustes al volver a abrirse. Ahora el panel visible los
+  aplica en vivo (sondeo de 2 s): eliges "Grande" y el panel crece delante
+  de ti. Verificado midiendo la ventana real en los tres tamaños sin
+  reabrir.
+
 ## [1.5.4] - 2026-08-31
 
 ### Corregido
@@ -316,6 +327,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.5]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.5
 [1.5.4]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.4
 [1.5.3]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.3
 [1.5.2]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.2
