@@ -3,6 +3,15 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.4] - 2026-08-31
+
+### Corregido
+
+- **El icono de la barra no aparecía en la 1.5.2/1.5.3**: el tray cascaba
+  al arrancar (`AttributeError: _update_ver`) porque el estado de la
+  comprobación de actualizaciones se inicializaba después de construir el
+  menú. Inicialización temprana + acceso defensivo.
+
 ## [1.5.3] - 2026-08-31
 
 ### Corregido
@@ -307,6 +316,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.4]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.4
 [1.5.3]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.3
 [1.5.2]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.2
 [1.5.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.1

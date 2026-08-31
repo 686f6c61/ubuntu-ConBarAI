@@ -475,6 +475,7 @@ class Tray:
         self.busy = set()
         self._sig = None
         self._help_win = None
+        self._update_ver = None
 
         self.rebuild_menu()
         settings = OC.load_settings()
@@ -486,7 +487,6 @@ class Tray:
 
         GLib.timeout_add_seconds(2, self.on_poll)
         GLib.timeout_add(350, self.on_anim)
-        self._update_ver = None
         GLib.timeout_add_seconds(20, self._check_update_once)
         GLib.timeout_add_seconds(6 * 3600, self.check_update)
 
@@ -663,7 +663,7 @@ class Tray:
         item_help.connect("activate", self.on_help)
         menu.append(item_help)
 
-        if self._update_ver:
+        if getattr(self, "_update_ver", None):
             item_up = icon_item(
                 f"Actualizar a v{self._update_ver}",
                 ["software-update-available-symbolic", "system-software-update"],
