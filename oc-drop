@@ -290,20 +290,30 @@ class DiagWindow(Gtk.Window):
         else:
             px, py = self.parent_win.get_position()
             pw, ph = self.parent_win.get_size()
+        self._panel_geo = (px, py, pw, ph)
         card_w = pw - (SHADOW_L + SHADOW_R)
         below = OC.load_settings().get("diag_pos", "side") == "below"
+        gap = 8  # separación fina entre tarjetas, igual en ambos modos
+        if not below:
+            # gemela del panel y pegada a su izquierda; recortada al
+            # espacio libre y, si no cabe un mínimo legible, cae a debajo
+            disponible = px - gap - (wa_x // f)
+            if disponible < 300:
+                below = True
+            else:
+                card_w = min(card_w, disponible)
         if below:
             # margen inferior para no pisar el borde del menú inferior
             bottom = (wa_y + wa_h) // f - 40
-            # holgura de 8 px entre tarjetas: que no se solapen las sombras
-            ty = py + ph - SHADOW_B - SHADOW_T + 8
+            ty = py + ph - SHADOW_B - SHADOW_T + gap
             card_h = max(200, min(460, bottom - ty - (SHADOW_T + SHADOW_B)))
             self._target_x_px = px * f
             self._target_y_px = ty * f
         else:
             card_h = ph - (SHADOW_T + SHADOW_B)
-            # tarjeta derecha a 50 px X de la tarjeta izquierda del panel
-            self._target_x_px = (px - card_w) * f - 50
+            # borde de la consola pegado al borde del panel (hueco de 8 px
+            # entre tarjetas, sombras aparte)
+            self._target_x_px = (px + SHADOW_L - gap - card_w - SHADOW_L) * f
             self._target_y_px = py * f
         w = card_w + SHADOW_L + SHADOW_R
         h = card_h + SHADOW_T + SHADOW_B
@@ -464,6 +474,8 @@ class DropWindow(Gtk.ApplicationWindow):
         self._grace_until = 0.0
         self._maximized = False
         self._geo_key = None
+        self._user_geo_timer = 0
+        self._cursor_edge = None
         self._css_provider = None
         self._look_key = None
         self._busy = None
@@ -545,6 +557,16 @@ class DropWindow(Gtk.ApplicationWindow):
         self.connect("focus-out-event", self.on_focus_out)
         self.connect("map-event", self.on_map_event)
         self.connect("delete-event", self.on_delete)
+        # bandas de sombra izquierda/inferior = asas de redimensionado
+        self.add_events(
+            Gdk.EventMask.BUTTON_PRESS_MASK
+            | Gdk.EventMask.POINTER_MOTION_MASK
+            | Gdk.EventMask.LEAVE_NOTIFY_MASK
+        )
+        self.connect("button-press-event", self.on_window_button)
+        self.connect("motion-notify-event", self.on_window_motion)
+        self.connect("leave-notify-event", lambda *a: self._set_edge_cursor(None))
+        self.connect("configure-event", self.on_configure)
 
     # ---------- portapapeles y arrastrar/soltar ----------
 
@@ -677,6 +699,111 @@ class DropWindow(Gtk.ApplicationWindow):
     def diag_closed(self):
         self.diag_win = None
         self.term.grab_focus()
+
+    def follow_diag(self):
+        """Si el usuario redimensiona el panel con la consola abierta,
+        la consola se recoloca para seguir gemela y pegada. También se
+        autocorrige si ella misma quedó fuera de su objetivo (un resize
+        a medias, un empujón del WM)."""
+        d = self.diag_win
+        if d is None or d.closing:
+            return
+        gxp = d._x_geometry(self)
+        gxd = d._x_geometry(d)
+        if gxp is None or gxd is None:
+            return
+        f = self.get_scale_factor() or 1
+        geo = (gxp["x"] // f, gxp["y"] // f, gxp["w"] // f, gxp["h"] // f)
+        desincron = (
+            abs(gxd["w"] - d._target_w * f) > 4 * f
+            or abs(gxd["h"] - d._target_h * f) > 4 * f
+            or abs(gxd["x"] - d._target_x_px) > 4 * f
+            or abs(gxd["y"] - d._target_y_px) > 4 * f
+        )
+        if geo != getattr(d, "_panel_geo", None) or desincron:
+            d._stable = d._tries = d._noeffect = 0
+            d._xoff = d._yoff = 0
+            d._last_actual = None
+            d._place()
+            GLib.timeout_add(250, d._assert_place)
+
+    # ---------- redimensionado por los bordes (bandas de sombra) ----------
+
+    def _edge_at(self, wx, wy):
+        """Borde de redimensionado bajo el punto (coords lógicas de la
+        ventana): banda de sombra izquierda, inferior o su esquina. Los
+        lados superior y derecho son pantalla (panel anclado). Se mide
+        con las constantes de sombra: la asignación del hijo empieza en
+        0 aunque el dibujo vaya con el margen CSS."""
+        w, h = self.get_size()
+        izq = wx < SHADOW_L
+        abajo = wy > h - SHADOW_B
+        if izq and abajo:
+            return Gdk.WindowEdge.SOUTH_WEST
+        if izq:
+            return Gdk.WindowEdge.WEST
+        if abajo:
+            return Gdk.WindowEdge.SOUTH
+        return None
+
+    def _set_edge_cursor(self, edge):
+        if edge == self._cursor_edge:
+            return
+        self._cursor_edge = edge
+        nombres = {
+            Gdk.WindowEdge.WEST: "w-resize",
+            Gdk.WindowEdge.SOUTH: "s-resize",
+            Gdk.WindowEdge.SOUTH_WEST: "sw-resize",
+        }
+        gd = self.get_window()
+        if gd is None:
+            return
+        if edge is None:
+            gd.set_cursor(None)
+        else:
+            gd.set_cursor(Gdk.Cursor.new_from_name(
+                self.get_display(), nombres[edge]))
+
+    def on_window_motion(self, _w, event):
+        self._set_edge_cursor(self._edge_at(event.x, event.y))
+        return False
+
+    def on_window_button(self, _w, event):
+        edge = self._edge_at(event.x, event.y)
+        if edge is not None and event.button == 1:
+            self.begin_resize_drag(
+                edge, event.button,
+                int(event.x_root), int(event.y_root), event.time,
+            )
+            return True
+        return False
+
+    def on_configure(self, _w, _event):
+        """Tras un redimensionado del usuario, guarda el tamaño como
+        fracción de pantalla (con retardo, para no escribir por píxel)."""
+        if self._maximized or not self.get_visible():
+            return False
+        if self._user_geo_timer:
+            GLib.source_remove(self._user_geo_timer)
+        self._user_geo_timer = GLib.timeout_add(600, self._save_user_geo)
+        return False
+
+    def _save_user_geo(self):
+        self._user_geo_timer = 0
+        if self._maximized or not self.get_visible():
+            return False
+        wa_x, wa_y, wa_w, wa_h = workarea()
+        f = self.get_scale_factor() or 1
+        w, h = self.get_size()
+        wf = round((w - (SHADOW_L + SHADOW_R)) * f / wa_w, 4)
+        hf = round((h - (SHADOW_T + SHADOW_B)) * f / wa_h, 4)
+        s = OC.load_settings()
+        if abs(s["width"] - wf) < 0.004 and abs(s["height"] - hf) < 0.004:
+            return False
+        s["width"], s["height"] = wf, hf
+        self._geo_key = (wf, hf)
+        OC.save_settings(s)
+        return False
 
     # ---------- aspecto ----------
 
@@ -869,6 +996,12 @@ class DropWindow(Gtk.ApplicationWindow):
             region = cairo.Region(cairo.RectangleInt(
                 alloc.x, alloc.y, alloc.width, alloc.height
             ))
+            # bandas izquierda e inferior: asas de redimensionado (las
+            # bandas superior y derecha siguen dejando pasar los clics)
+            region.union(cairo.RectangleInt(
+                0, alloc.y, alloc.x, alloc.height + SHADOW_B))
+            region.union(cairo.RectangleInt(
+                0, alloc.y + alloc.height, alloc.x + alloc.width, SHADOW_B))
             gd = self.get_window()
             if gd and alloc.width > 1:
                 gd.input_shape_combine_region(region, 0, 0)
@@ -1007,6 +1140,7 @@ class DropApp(Gtk.Application):
         for win in list(self.windows.values()):
             win.update_state()
             win.refresh_settings()
+            win.follow_diag()
             if refresh_usage:
                 win.update_usage()
             win.check_new_report()

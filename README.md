@@ -91,7 +91,10 @@ systemctl --user status oc-crash-watch
 - **Cerrar paneles** — cierra las ventanas; tmux y OpenCode siguen vivos.
 - **Sesiones** y **Carpetas recientes** — vuelve a cualquiera con un clic.
 - **Tamaño**, **Transparencia**, **Tema**, **Tecla de apertura** —
-  presets del panel.
+  presets del panel. El tamaño también se ajusta **estirando el panel
+  por sus bordes** (sombra izquierda, inferior o la esquina): se guarda
+  como fracción de pantalla y se ve igual de bien en cualquier
+  resolución.
 - **Diagnóstico de crashes** — posición de la consola, vigía y análisis
   activables, y acceso a la carpeta de informes.
 - **Abrir continuando la última sesión (-c)** — retomar contexto al

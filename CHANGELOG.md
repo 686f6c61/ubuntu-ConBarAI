@@ -3,6 +3,24 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.6.0] - 2026-08-31
+
+### Añadido
+
+- **El panel se redimensiona estirando sus bordes**, como cualquier
+  ventana: la sombra izquierda, la inferior y su esquina son asas (con
+  cursor de redimensionado), manteniendo el anclaje arriba-derecha. El
+  tamaño se guarda como fracción de pantalla (con retardo de 0,6 s), así
+  se ve igual de proporcionado en cualquier resolución o monitor. Los
+  presets de Tamaño siguen como atajos.
+- **La consola de crash se adapta al panel**: gemela y pegada (hueco de
+  8 px, antes 25) con su misma altura; recortada al espacio libre si el
+  panel es muy ancho (mínimo legible de 300 px); cae a "debajo"
+  automáticamente si no cabe; y sigue al panel en vivo si lo
+  redimensionas con ella abierta, autocorrigiéndose si queda
+  descolocada. Auditado con 12 comprobaciones automatizadas sobre
+  ventanas reales.
+
 ## [1.5.9] - 2026-08-31
 
 ### Añadido
@@ -397,6 +415,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.6.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.6.0
 [1.5.9]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.9
 [1.5.8]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.8
 [1.5.7]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.7

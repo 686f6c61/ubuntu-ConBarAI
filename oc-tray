@@ -252,6 +252,10 @@ def help_markup(theme):
     {k("Ctrl+V")} pega    {k("Ctrl+C")} copia si hay selección {dim("(si no, interrumpe")}
     {dim("al agente)")}    también {k("Ctrl+Mayús+C/V")}, {k("Mayús+Insert")} y clic derecho.
     Arrastra archivos o carpetas: se insertan como rutas listas.
+    Estira el panel por su sombra izquierda, inferior o la esquina:
+    el tamaño se guarda como fracción de pantalla y se recuerda en
+    cualquier monitor. La consola de crash se adapta sola (gemela,
+    recortada si no cabe, o debajo).
 
 {s("EL MENÚ DEL ICONO")}
     {k("Abrir / ocultar OpenCode")}   lo mismo que el atajo de teclado
@@ -303,7 +307,8 @@ def help_markup(theme):
 {s("AJUSTES")} {dim("~/.config/oc-drop/settings.json — el menú lo escribe por ti")}
     {k("workdir")}           {v("ruta")}             carpeta de trabajo por defecto
                                        {dim("(vacío = ~/Documentos/ConBarAI)")}
-    {k("width")}             {v("0.15-0.90")}        ancho del panel {dim("(fracción)")}
+    {k("width")}             {v("0.15-0.90")}        ancho del panel {dim("(fracción;")}
+                                       {dim("también al estirar los bordes)")}
     {k("height")}            {v("0.20-0.95")}        alto del panel {dim("(fracción)")}
     {k("opacity")}           {v("0.50-1.00")}        opacidad del panel
     {k("theme")}             {v("tokyo-night")} · {v("catppuccin")} · {v("dracula")} · {v("gruvbox")}
