@@ -3,6 +3,19 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.1] - 2026-08-31
+
+### Corregido
+
+- **Apagar el equipo ya no dispara el aviso de crash**: el vigía solo
+  anuncia un cambio de arranque si el anterior terminó DE GOLPE (sin los
+  marcadores de apagado ordenado — `Journal stopped`, `Shutting down.`,
+  `Reached target poweroff/shutdown` — al final de `journalctl -b -1`).
+  Un apagado o reinicio normal no genera ningún globo; si el journal del
+  arranque anterior no se puede leer, tampoco (antes que un falso
+  positivo, silencio). El aviso real pasa a decir "El equipo se apagó de
+  golpe". 4 tests nuevos (52), uno con el tail real de un apagado limpio.
+
 ## [1.5.0] - 2026-08-31
 
 ### Añadido
@@ -272,6 +285,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.1
 [1.5.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.0
 [1.4.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.4.0
 [1.3.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.3.1

@@ -573,6 +573,34 @@ def parse_journal_crash(text):
     return events
 
 
+# Marcadores de un apagado ordenado al final del journal del arranque
+# anterior (systemd los escribe siempre en inglés). Si no aparece ninguno,
+# el arranque terminó de golpe (panic, corte de luz, cuelgue).
+CLEAN_SHUTDOWN_RE = re.compile(
+    r"Journal stopped"
+    r"|Shutting down\."
+    r"|systemd-shutdow"
+    r"|Reached target (?:[a-z-]+\.target - )?(?:System )?"
+    r"(?:Shutdown|Power-?Off|Reboot|Halt)",
+    re.I,
+)
+
+
+def previous_boot_clean():
+    """True si el arranque anterior terminó con un apagado ordenado,
+    False si acabó de golpe, None si el journal no permite saberlo."""
+    try:
+        out = subprocess.run(
+            ["journalctl", "-b", "-1", "-n", "60", "-o", "cat", "--no-pager"],
+            capture_output=True, text=True, timeout=15, check=False,
+        )
+        if out.returncode != 0 or not out.stdout.strip():
+            return None
+        return bool(CLEAN_SHUTDOWN_RE.search(out.stdout))
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def boot_id():
     try:
         return Path("/proc/sys/kernel/random/boot_id").read_text().strip()

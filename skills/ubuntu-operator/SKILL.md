@@ -270,8 +270,10 @@ running**.
 - **Watcher = a user service** (`oc-crash-watch.service`, `PartOf=` graphical
   session, `Restart=always`), like Omarchy's. Poll every few seconds
   (apport has no single journal `MESSAGE_ID` like systemd-coredump, so watch):
-  - `boot_id` changed → machine rebooted (panic/power loss): analyse
-    `journalctl -k -b -1`;
+  - `boot_id` changed AND the previous boot did NOT end with an orderly
+    shutdown (no `Journal stopped` / `Reached target poweroff` markers at
+    the tail of `journalctl -b -1`) → panic/power loss: analyse
+    `journalctl -k -b -1`. A clean shutdown or reboot is never announced;
   - a **new/updated file** under `/var/crash/` (by mtime; listing needs no
     sudo): an apport crash — read it via `apport-cli`/sudo for content;
   - `journalctl -k --since <watermark>` matching

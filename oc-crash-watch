@@ -104,16 +104,25 @@ def poll(state, cfg, seen):
     """Una pasada de vigilancia. Devuelve nº de eventos notificados."""
     cur = OC.boot_id()
 
-    # Reinicio: el arranque anterior terminó sin cerrar nuestro watcher.
+    # Cambio de arranque: solo es noticia si el anterior terminó DE GOLPE.
+    # Un apagado o reinicio ordenado (menú de GNOME, `reboot`…) deja sus
+    # marcadores al final del journal y no merece ningún globo.
     if state.get("boot_id") and cur and cur != state["boot_id"]:
+        state["boot_id"] = cur
+        state["watermark"] = now_iso()
+        limpio = OC.previous_boot_clean()
+        if limpio:
+            OC.log("reinicio tras apagado ordenado: sin aviso")
+            return 0
+        if limpio is None:
+            OC.log("journal del arranque anterior ilegible: sin aviso")
+            return 0
         prev = OC.journal_since(True, "", extra_args=["-b", "-1"])
         events = OC.parse_journal_crash(prev)[-1:]
         label = events[0]["program"] if events else "desconocido"
-        notify("El equipo se reinició",
-               f"ConBarAI: posible panic/cierre del arranque anterior "
-               f"(último fallo: {label}). Revisa el journal.")
-        state["boot_id"] = cur
-        state["watermark"] = now_iso()
+        notify("El equipo se apagó de golpe",
+               f"ConBarAI: el arranque anterior terminó sin apagado "
+               f"ordenado (último fallo: {label}). Revisa el journal.")
         return 1
 
     if cur:

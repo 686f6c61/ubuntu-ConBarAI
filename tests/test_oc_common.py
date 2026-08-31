@@ -356,3 +356,43 @@ def test_take_stale_pending_huerfana_la_consume(tmp_path, monkeypatch):
     assert data["program"] == "gimp"
     assert not pending.exists()
     assert OC.take_stale_pending(20) is None
+
+
+# ---------- apagado ordenado vs de golpe ----------
+
+
+class _FakeRun:
+    def __init__(self, stdout, returncode=0):
+        self.stdout = stdout
+        self.returncode = returncode
+
+
+def test_previous_boot_clean_apagado_ordenado(monkeypatch):
+    tail = (
+        "Reached target poweroff.target - System Power Off.\n"
+        "Shutting down.\n"
+        "Journal stopped\n"
+    )
+    monkeypatch.setattr(OC.subprocess, "run", lambda *a, **k: _FakeRun(tail))
+    assert OC.previous_boot_clean() is True
+
+
+def test_previous_boot_clean_solo_reached_target(monkeypatch):
+    tail = "Reached target shutdown.target - System Shutdown.\n"
+    monkeypatch.setattr(OC.subprocess, "run", lambda *a, **k: _FakeRun(tail))
+    assert OC.previous_boot_clean() is True
+
+
+def test_previous_boot_clean_corte_de_golpe(monkeypatch):
+    tail = (
+        "gnome-shell[2412]: meta_window_actor...\n"
+        "kernel: snap-store[1241]: segfault at 58875 ip 000075c1\n"
+        "NetworkManager[988]: <info> dhcp4: state changed\n"
+    )
+    monkeypatch.setattr(OC.subprocess, "run", lambda *a, **k: _FakeRun(tail))
+    assert OC.previous_boot_clean() is False
+
+
+def test_previous_boot_clean_journal_ilegible(monkeypatch):
+    monkeypatch.setattr(OC.subprocess, "run", lambda *a, **k: _FakeRun("", 1))
+    assert OC.previous_boot_clean() is None
