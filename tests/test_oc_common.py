@@ -306,7 +306,7 @@ def test_scripts_compilan(tmp_path):
 
 def test_scripts_bash_validos():
     root = Path(__file__).resolve().parents[1]
-    for name in ("conbarai", "install.sh", "uninstall.sh"):
+    for name in ("conbarai", "install.sh", "uninstall.sh", "scripts/build-appimage.sh"):
         subprocess.run(["bash", "-n", str(root / name)], check=True)
 
 

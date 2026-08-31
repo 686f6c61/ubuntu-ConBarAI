@@ -5,7 +5,23 @@
 # y enlaza todo en ~/.local. El atajo global lo gestiona oc-tray.
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" 2>/dev/null && pwd || pwd)"
+
+# Guion suelto (bash <(curl …) o curl | bash): descarga la última release
+# publicada y sigue la instalación desde ella.
+if [ ! -f "$DIR/oc-drop" ]; then
+  echo "[i] Descargando la última release de ConBarAI..."
+  TMPD="$(mktemp -d)"
+  TAG="$(curl -fsSL https://api.github.com/repos/686f6c61/ubuntu-ConBarAI/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)"
+  if [ -z "$TAG" ]; then
+    echo "[!] No se pudo resolver la última release; clona el repositorio e instala desde ahí."
+    exit 1
+  fi
+  echo "[i] Release $TAG"
+  curl -fsSL "https://github.com/686f6c61/ubuntu-ConBarAI/archive/refs/tags/$TAG.tar.gz" | tar -xz -C "$TMPD"
+  exec bash "$TMPD"/ubuntu-ConBarAI-*/install.sh "$@"
+fi
+
 BIN="$HOME/.local/bin"
 SHARE="$HOME/.local/share/oc-drop"
 CONFIG="$HOME/.config/oc-drop"

@@ -25,8 +25,9 @@ BANNER
 echo "${RST}${DIM}Console Bar Artificial Intelligence · desinstalación${RST}"
 echo
 
-warn "Se retirarán binarios, servicio, autostart, atajo, AJUSTES e"
-warn "INFORMES de crash (~/.config/oc-drop y ~/.local/state/oc-drop)."
+warn "Se retirarán binarios, servicio, autostart, atajo, la copia de la"
+warn "AppImage (~/.local/share/conbarai), y los AJUSTES e INFORMES de"
+warn "crash (~/.config/oc-drop y ~/.local/state/oc-drop)."
 info "Las sesiones tmux y tu OpenCode general no se tocan."
 if [ -t 0 ]; then
   read -r -p "¿Desinstalar ConBarAI? [s/N] " resp
@@ -53,7 +54,8 @@ fi
 rm -f "$HOME/.local/bin/conbarai" \
       "$HOME/.local/bin/oc-drop" "$HOME/.local/bin/oc-tray" \
       "$HOME/.local/bin/oc-crash-watch" "$HOME/.local/bin/oc-crash-run"
-rm -rf "$HOME/.local/share/oc-drop" "$HOME/.config/oc-drop" "$HOME/.local/state/oc-drop"
+rm -rf "$HOME/.local/share/oc-drop" "$HOME/.config/oc-drop" "$HOME/.local/state/oc-drop" \
+       "$HOME/.local/share/conbarai"
 rm -f "$HOME/.config/autostart/oc-tray.desktop"
 rm -f "$HOME/.local/share/applications/conbarai.desktop"
 update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true

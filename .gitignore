@@ -30,3 +30,6 @@ TODO-IA.md
 
 # Caché local de la CLI de Cloudflare
 .cloudflare/
+
+# AppImage construida en local
+dist/

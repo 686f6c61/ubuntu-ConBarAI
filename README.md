@@ -114,6 +114,26 @@ menú, cada atajo, cada comando y cada ajuste.
 
 ## Instalación
 
+**Opción A — AppImage** (recomendada): descarga
+[`ConBarAI-x86_64.AppImage`](https://github.com/686f6c61/ubuntu-ConBarAI/releases/latest/download/ConBarAI-x86_64.AppImage)
+de la última release, dale permiso de ejecución y ábrela. Instala o
+actualiza la app (icono, atajo, vigía y entrada de Aplicaciones) y la
+lanza; volver a ejecutarla actualiza a esa versión.
+
+```bash
+curl -fLo ~/Descargas/ConBarAI.AppImage \
+  https://github.com/686f6c61/ubuntu-ConBarAI/releases/latest/download/ConBarAI-x86_64.AppImage
+chmod +x ~/Descargas/ConBarAI.AppImage && ~/Descargas/ConBarAI.AppImage
+```
+
+**Opción B — instalador desde la última release** (interactivo):
+
+```bash
+bash <(curl -fsSL https://github.com/686f6c61/ubuntu-ConBarAI/releases/latest/download/install.sh)
+```
+
+**Opción C — clon del repositorio** (modo desarrollo, con symlinks):
+
 ```bash
 git clone https://github.com/686f6c61/ubuntu-ConBarAI.git
 cd ubuntu-ConBarAI

@@ -118,6 +118,26 @@ entry, shortcut, command and setting.
 
 ## Installation
 
+**Option A — AppImage** (recommended): download
+[`ConBarAI-x86_64.AppImage`](https://github.com/686f6c61/ubuntu-ConBarAI/releases/latest/download/ConBarAI-x86_64.AppImage)
+from the latest release, make it executable and run it. It installs or
+updates the app (icon, shortcut, watcher and Applications entry) and
+launches it; running it again updates to that version.
+
+```bash
+curl -fLo ~/Downloads/ConBarAI.AppImage \
+  https://github.com/686f6c61/ubuntu-ConBarAI/releases/latest/download/ConBarAI-x86_64.AppImage
+chmod +x ~/Downloads/ConBarAI.AppImage && ~/Downloads/ConBarAI.AppImage
+```
+
+**Option B — installer from the latest release** (interactive):
+
+```bash
+bash <(curl -fsSL https://github.com/686f6c61/ubuntu-ConBarAI/releases/latest/download/install.sh)
+```
+
+**Option C — repository clone** (development mode, symlinks):
+
 ```bash
 git clone https://github.com/686f6c61/ubuntu-ConBarAI.git
 cd ubuntu-ConBarAI

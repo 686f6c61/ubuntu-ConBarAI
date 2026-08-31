@@ -3,9 +3,22 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
-## [Sin publicar]
+## [1.5.0] - 2026-08-31
 
 ### Añadido
+
+- **AppImage en cada release**: el workflow de Release construye
+  `ConBarAI-x86_64.AppImage` y la adjunta (junto a `install.sh`) a la
+  release. La AppImage lleva la app completa: al ejecutarla instala o
+  actualiza ConBarAI en `~/.local/share/conbarai/app`, registra icono,
+  atajo, autostart y vigía, y lanza la app; ejecutarla de nuevo
+  actualiza. Comprueba las dependencias del sistema y las pide con un
+  aviso claro si faltan. El propio workflow la prueba instalándola en un
+  HOME limpio antes de publicar.
+- **El instalador arranca desde la última release**: `install.sh` suelto
+  (`bash <(curl -fsSL .../releases/latest/download/install.sh)`) descarga
+  la release más nueva y se instala desde ella; desde un clon sigue
+  instalando en modo desarrollo (symlinks al repo).
 
 - **Web del producto** en https://conbarai.686f6c61.dev (rama `landing`,
   desplegada en el servidor propio con Coolify + Traefik, patrón
@@ -25,6 +38,8 @@ y adherido al [Versionado Semántico](https://semver.org/lang/es/).
   icono no aparecía), y **Salir** sale de verdad — cierra panel, sesiones
   de OpenCode y vigía, con confirmación. Al reabrir, `-c` retoma la
   conversación donde estaba.
+- El desinstalador retira también la copia instalada por la AppImage
+  (`~/.local/share/conbarai`).
 
 ## [1.4.0] - 2026-08-30
 
@@ -257,6 +272,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.0
 [1.4.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.4.0
 [1.3.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.3.1
 [1.3.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.3.0
