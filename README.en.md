@@ -101,6 +101,9 @@ systemctl --user status oc-crash-watch
 - **Open continuing the last session (-c)** — resume context on start,
   or always start fresh.
 - **Hide on focus loss** and **Start on login**.
+- **Update to vX.Y.Z** — appears when a new release exists (checked on
+  start and every 6 h, can be disabled): one click downloads the
+  AppImage, updates and restarts the app. Also `conbarai --update`.
 - **Help** — a complete built-in manual, styled like a `man` page.
 - **ConBarAI x.y.z** — the installed version opens this repository.
 - **Quit** — closes the whole app: panel, sessions and watcher (on
@@ -218,6 +221,7 @@ attention), the working folder and the usage.
 | `font_size` | Font size | 7 - 16 |
 | `continue_session` | OpenCode starts with `-c` (resumes the last session). The "New session" button always starts fresh | true / false |
 | `diag_pos` | Position of the crash diagnostic console | `side` / `below` |
+| `update_check` | Announce new versions (checks the releases on start and every 6 h) | true / false |
 | `crash_watch` | Watch for system crashes (kernel journal) | true / false |
 | `crash_analyze` | Analyze crashes with AI | true / false |
 | `crash_dedupe` | Per-program dedupe window (seconds) | integer |
@@ -241,8 +245,9 @@ Everything is local, in user space:
   general OpenCode.
 - Settings and state are stored 0600 inside 0700 directories.
 - OpenCode's database is opened read-only.
-- No feature of ConBarAI itself makes network requests (the AI is your
-  OpenCode).
+- The only network request ConBarAI itself makes is the new-version
+  check against the GitHub releases (disable with `update_check`);
+  the AI is your OpenCode.
 - `install.sh` can install OpenCode with the official installer
   (`curl ... | bash`): review the script if you prefer another method.
 

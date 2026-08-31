@@ -97,6 +97,9 @@ systemctl --user status oc-crash-watch
 - **Abrir continuando la última sesión (-c)** — retomar contexto al
   arrancar, o empezar siempre de cero.
 - **Ocultar al perder el foco** y **Arrancar al iniciar el sistema**.
+- **Actualizar a vX.Y.Z** — aparece cuando hay release nueva (se
+  comprueba al arrancar y cada 6 h, desactivable): un clic descarga la
+  AppImage, actualiza y reinicia la app. También `conbarai --update`.
 - **Ayuda** — manual completo integrado, con estética de página `man`.
 - **ConBarAI x.y.z** — la versión instalada abre este repositorio.
 - **Salir** — cierra la app completa: panel, sesiones y vigía (al
@@ -215,6 +218,7 @@ La cabecera muestra un punto verde (sesión viva), rojo (muerta) o ámbar
 | `font_size` | Tamaño de la tipografía | 7 - 16 |
 | `continue_session` | OpenCode arranca con `-c` (retoma la última sesión). El botón "Nueva sesión" siempre empieza de cero | true / false |
 | `diag_pos` | Posición de la consola de diagnóstico de crashes | `side` (al lado) / `below` (debajo) |
+| `update_check` | Avisar de versiones nuevas (consulta las releases al arrancar y cada 6 h) | true / false |
 | `crash_watch` | Vigilar crashes del sistema (journal del kernel) | true / false |
 | `crash_analyze` | Analizar los crashes con IA | true / false |
 | `crash_dedupe` | Ventana de deduplicación por programa (segundos) | entero |
@@ -239,7 +243,9 @@ Todo es local, en el espacio del usuario:
   panel, no en tu OpenCode general.
 - Ajustes y registros con permisos 0600 en directorios 0700.
 - La base de datos de OpenCode se abre en modo solo lectura.
-- Ninguna función propia hace peticiones de red (la IA es tu OpenCode).
+- La única petición de red propia es la comprobación de versiones
+  nuevas contra las releases de GitHub (desactivable con
+  `update_check`); la IA es tu OpenCode.
 - `install.sh` puede instalar OpenCode con el instalador oficial
   (`curl ... | bash`): revisa el guion si prefieres otro método.
 

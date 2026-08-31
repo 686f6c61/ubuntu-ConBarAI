@@ -1,5 +1,6 @@
 """Tests unitarios de oc_common (sin tocar los ajustes reales del usuario)."""
 
+import io
 import json
 import py_compile
 import subprocess
@@ -396,3 +397,37 @@ def test_previous_boot_clean_corte_de_golpe(monkeypatch):
 def test_previous_boot_clean_journal_ilegible(monkeypatch):
     monkeypatch.setattr(OC.subprocess, "run", lambda *a, **k: _FakeRun("", 1))
     assert OC.previous_boot_clean() is None
+
+
+# ---------- comprobación de versiones nuevas ----------
+
+
+def test_version_newer():
+    assert OC.version_newer("1.5.2", "1.5.1") is True
+    assert OC.version_newer("v2.0.0", "1.9.9") is True
+    assert OC.version_newer("1.5.1", "1.5.1") is False
+    assert OC.version_newer("1.5.0", "1.5.1") is False
+    assert OC.version_newer("basura", "1.5.1") is False
+
+
+def test_latest_release_version_parsea_tag(monkeypatch):
+    class _Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    monkeypatch.setattr(
+        OC.urllib.request, "urlopen",
+        lambda *a, **k: _Resp(b'{"tag_name": "v1.5.2"}'),
+    )
+    assert OC.latest_release_version() == "1.5.2"
+
+
+def test_latest_release_version_sin_red(monkeypatch):
+    def caida(*a, **k):
+        raise OSError("sin red")
+
+    monkeypatch.setattr(OC.urllib.request, "urlopen", caida)
+    assert OC.latest_release_version() is None

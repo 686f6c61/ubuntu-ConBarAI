@@ -7,6 +7,33 @@ set -u
 
 BIN="$HOME/.local/bin"
 
+# --update: descarga la AppImage de la última release, actualiza la
+# instalación y reinicia la app entera con el código nuevo.
+if [ "${1:-}" = "--update" ]; then
+  DESTINO="$HOME/Aplicaciones"
+  mkdir -p "$DESTINO"
+  TMP="$(mktemp "$DESTINO/.conbarai-XXXXXX.AppImage")"
+  URL="https://github.com/686f6c61/ubuntu-ConBarAI/releases/latest/download/ConBarAI-x86_64.AppImage"
+  if ! curl -fsSL -o "$TMP" "$URL"; then
+    rm -f "$TMP"
+    notify-send "ConBarAI" "No se pudo descargar la actualización." 2>/dev/null
+    exit 1
+  fi
+  chmod +x "$TMP"
+  mv "$TMP" "$DESTINO/ConBarAI-x86_64.AppImage"
+  if ! CONBARAI_INSTALL_ONLY=1 "$DESTINO/ConBarAI-x86_64.AppImage"; then
+    notify-send "ConBarAI" "La actualización no terminó bien; ejecuta la AppImage a mano." 2>/dev/null
+    exit 1
+  fi
+  systemctl --user try-restart oc-crash-watch.service 2>/dev/null || true
+  "$BIN/oc-drop" --quit 2>/dev/null || true
+  pkill -f "$BIN/oc-tray" 2>/dev/null || true
+  sleep 1
+  VER="$(grep -m1 '^version' "$HOME/.local/share/conbarai/app/pyproject.toml" 2>/dev/null | cut -d'"' -f2)"
+  notify-send "ConBarAI" "Actualizado a la versión ${VER:-nueva}." 2>/dev/null
+  exec "$BIN/conbarai"
+fi
+
 # Icono de la barra (si no está ya)
 if ! pgrep -f "$BIN/oc-tray" >/dev/null 2>&1; then
   setsid "$BIN/oc-tray" >/dev/null 2>&1 &

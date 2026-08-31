@@ -3,6 +3,19 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.2] - 2026-08-31
+
+### Añadido
+
+- **La app se actualiza sola desde las releases**: el tray comprueba la
+  última release de GitHub (al arrancar y cada 6 h; ajuste
+  `update_check`, con casilla "Avisar de versiones nuevas" en el menú).
+  Si hay versión nueva, notifica y aparece "Actualizar a vX.Y.Z" en el
+  menú: un clic descarga la AppImage de la release, actualiza la
+  instalación y reinicia panel, tray y vigía con el código nuevo. También
+  desde terminal: `conbarai --update`. Es la única petición de red de la
+  app y se puede apagar.
+
 ## [1.5.1] - 2026-08-31
 
 ### Corregido
@@ -285,6 +298,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.2]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.2
 [1.5.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.1
 [1.5.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.0
 [1.4.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.4.0

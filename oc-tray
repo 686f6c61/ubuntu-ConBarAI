@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import warnings
 from pathlib import Path
 
@@ -212,6 +213,7 @@ def help_markup(theme):
 {s("SINOPSIS")}
     {k("Súper+Intro")}                      abrir u ocultar el panel
     {c("$ conbarai")}                       la app completa (tray + panel)
+    {c("$ conbarai --update")}              actualizar a la última release
     {c("$ oc-drop")} [{k("--workdir")} RUTA]      panel de una carpeta concreta
     {c("$ oc-drop --quit")}                 cerrar paneles (tmux sigue vivo)
     {c("$ oc-crash-watch --once")}          una pasada de detección
@@ -259,6 +261,9 @@ def help_markup(theme):
                                arrancar; desmarcada: siempre de cero
     {k("Ocultar al perder el foco")}  autohide del panel
     {k("Arrancar al iniciar")}        autoarranque del icono
+    {k("Avisar de versiones nuevas")} comprueba las releases al arrancar
+                               y cada 6 h; si hay una nueva, aparece
+                               {k("Actualizar a vX.Y.Z")} en el menú
     {k("Ayuda")}                      esta página {dim("(Esc para cerrar)")}
     {k("ConBarAI " + ver)}              abre el repositorio del proyecto
     {k("Salir")}                      cierra la app entera: panel,
@@ -298,6 +303,8 @@ def help_markup(theme):
     {k("recent_dirs")}       {v("lista")}            últimas carpetas {dim("(lo escribe")}
                                        {dim("el tray)")}
     {k("diag_pos")}          {v("side")} · {v("below")}     consola al lado o debajo
+    {k("update_check")}      {v("true")} · {v("false")}     avisar de versiones nuevas
+                                       {dim("(única petición de red de la app)")}
     {k("crash_watch")}       {v("true")} · {v("false")}     vigía de crashes
     {k("crash_analyze")}     {v("true")} · {v("false")}     análisis con IA
     {k("crash_poll")}        {v("segundos")}         cadencia del vigía {dim("(def. 8)")}
@@ -479,6 +486,9 @@ class Tray:
 
         GLib.timeout_add_seconds(2, self.on_poll)
         GLib.timeout_add(350, self.on_anim)
+        self._update_ver = None
+        GLib.timeout_add_seconds(20, self._check_update_once)
+        GLib.timeout_add_seconds(6 * 3600, self.check_update)
 
     # ---------- encuesta ----------
     def on_poll(self):
@@ -510,6 +520,44 @@ class Tray:
             else:
                 self.indicator.set_icon_full(self.icon_normal, "OpenCode")
         return True
+
+    # ---------- actualizaciones ----------
+    def _check_update_once(self):
+        self.check_update()
+        return False
+
+    def check_update(self):
+        """Consulta la última release en un hilo (sin bloquear la UI)."""
+        if not OC.load_settings().get("update_check", True):
+            return True
+
+        def worker():
+            ver = OC.latest_release_version()
+            if ver and OC.version_newer(ver, OC.app_version()):
+                GLib.idle_add(self._update_found, ver)
+
+        threading.Thread(target=worker, daemon=True).start()
+        return True
+
+    def _update_found(self, ver):
+        if ver != self._update_ver:
+            self._update_ver = ver
+            self.rebuild_menu()
+            subprocess.run(
+                ["notify-send", "--app-name", "ConBarAI",
+                 f"ConBarAI v{ver} disponible",
+                 "Actualiza desde el menú del icono (o con: conbarai --update)."],
+                check=False,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+        return False
+
+    def on_update(self, *_):
+        subprocess.Popen(
+            [str(Path.home() / ".local/bin/conbarai"), "--update"],
+            start_new_session=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
 
     # ---------- menú ----------
     def rebuild_menu(self):
@@ -603,11 +651,26 @@ class Tray:
             self.on_autostart,
         ))
 
+        menu.append(check_item(
+            "Avisar de versiones nuevas",
+            bool(settings.get("update_check", True)),
+            lambda *_: self._toggle_setting("update_check", True),
+        ))
+
         menu.append(Gtk.SeparatorMenuItem())
 
         item_help = icon_item("Ayuda", ["help-contents-symbolic", "help-browser-symbolic"])
         item_help.connect("activate", self.on_help)
         menu.append(item_help)
+
+        if self._update_ver:
+            item_up = icon_item(
+                f"Actualizar a v{self._update_ver}",
+                ["software-update-available-symbolic", "system-software-update"],
+            )
+            item_up.set_tooltip_text("Descarga la release nueva y reinicia la app")
+            item_up.connect("activate", self.on_update)
+            menu.append(item_up)
 
         ver = OC.app_version()
         item_ver = icon_item(

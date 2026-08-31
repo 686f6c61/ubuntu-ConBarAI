@@ -7,6 +7,7 @@ import sqlite3
 import subprocess
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 HOME = Path.home()
@@ -24,6 +25,40 @@ DESKTOP_FILE = HOME / ".local/share/applications/conbarai.desktop"
 DEFAULT_SESSION = "oc"
 
 REPO_URL = "https://github.com/686f6c61/ubuntu-ConBarAI"
+RELEASE_API = "https://api.github.com/repos/686f6c61/ubuntu-ConBarAI/releases/latest"
+
+
+def version_tuple(v):
+    """(mayor, menor, parche) a partir de '1.5.2' o 'v1.5.2'."""
+    partes = re.findall(r"\d+", v or "")[:3]
+    if not partes:
+        raise ValueError(f"versión ilegible: {v!r}")
+    return tuple(int(x) for x in partes)
+
+
+def version_newer(candidata, actual):
+    """True si `candidata` es más nueva que `actual` (semver simple)."""
+    try:
+        return version_tuple(candidata) > version_tuple(actual)
+    except ValueError:
+        return False
+
+
+def latest_release_version(timeout=10):
+    """Versión de la última release publicada en GitHub ('1.5.2'), o None
+    si no hay red o la respuesta no es utilizable. Única petición de red
+    de ConBarAI; se desactiva con el ajuste `update_check`."""
+    try:
+        req = urllib.request.Request(
+            RELEASE_API,
+            headers={"User-Agent": "conbarai", "Accept": "application/vnd.github+json"},
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.load(resp)
+        tag = str(data.get("tag_name") or "").lstrip("v")
+        return tag or None
+    except (OSError, ValueError):
+        return None
 
 
 def app_version():
@@ -58,6 +93,9 @@ DEFAULTS = {
     # True: opencode arranca con -c (continúa la última sesión, p. ej. tras
     # un reinicio); False: siempre empieza sin contexto arrastrado
     "continue_session": True,
+    # True: el tray consulta la última release en GitHub (al arrancar y
+    # cada 6 h) y ofrece actualizar; False: nunca toca la red
+    "update_check": True,
 }
 
 AUTOSTART_TEMPLATE = """[Desktop Entry]
