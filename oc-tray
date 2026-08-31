@@ -34,7 +34,7 @@ BIN_APP = str(Path.home() / ".local/bin/conbarai")
 SCHEMA_MEDIA = "org.gnome.settings-daemon.plugins.media-keys"
 SCHEMA_CHILD = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding"
 KEY_PATH = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
-KEY_PATH_HIDE = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/conbarai-hide/"
+KEY_PATH_HIDE = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/"
 
 THEME_LABELS = {
     "tokyo-night": "Tokyo Night",
@@ -111,7 +111,9 @@ def apply_keybinding(binding):
         gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH}", "binding", binding)
         gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH_HIDE}", "name", "ConBarAI ocultar")
         gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH_HIDE}", "command", f"{BIN_DROP} --hide")
-        gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH_HIDE}", "binding", "<Super>q")
+        # <Super>q lo tiene el dock de Ubuntu (dash-to-dock) y el grab
+        # falla en silencio; <Super>x está libre y es mnemónico (la X)
+        gsettings_set(f"{SCHEMA_CHILD}:{KEY_PATH_HIDE}", "binding", "<Super>x")
     elif KEY_PATH in items or KEY_PATH_HIDE in items:
         items = [i for i in items if i not in (KEY_PATH, KEY_PATH_HIDE)]
         newlist = "[" + ", ".join(f"'{i}'" for i in items) + "]"
@@ -220,7 +222,7 @@ def help_markup(theme):
 
 {s("SINOPSIS")}
     {k("Súper+Intro")}                      abrir u ocultar el panel
-    {k("Súper+Q")}                          ocultar panel y consola
+    {k("Súper+X")}                          ocultar panel y consola
     {c("$ conbarai")}                       la app completa (tray + panel)
     {c("$ conbarai --update")}              actualizar a la última release
     {c("$ oc-drop")} [{k("--workdir")} RUTA]      panel de una carpeta concreta
@@ -458,9 +460,11 @@ class Tray:
         ("Suave", 0.90),
         ("Fuerte", 0.75),
     )
+    # Súper+A NUNCA puede funcionar en GNOME (es suyo: rejilla de
+    # aplicaciones); ofrecer solo combos que el shell no tenga cogidos.
     KEYS = (
-        ("Super + Intro", "<Super>Return"),
-        ("Super + A", "<Super>a"),
+        ("Súper + Intro", "<Super>Return"),
+        ("Súper + T", "<Super>t"),
         ("Sin atajo", ""),
     )
 

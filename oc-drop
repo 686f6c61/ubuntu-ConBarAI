@@ -8,7 +8,7 @@ la sesión vive aunque ocultes el panel.
 Uso:
   oc-drop                         abre/oculta el panel por defecto
   oc-drop --session N [--workdir R]  panel de una sesión concreta
-  oc-drop --hide                  oculta los paneles (Súper+Q lo usa)
+  oc-drop --hide                  oculta los paneles (Súper+X lo usa)
   oc-drop --quit                  cierra todos los paneles (tmux sigue vivo)
 """
 
@@ -232,7 +232,7 @@ class DiagWindow(Gtk.Window):
     def on_key(self, _term, event):
         if event.type != Gdk.EventType.KEY_PRESS:
             return False
-        if event.keyval in (Gdk.KEY_q, Gdk.KEY_Q) and (
+        if event.keyval in (Gdk.KEY_x, Gdk.KEY_X) and (
             event.state & Gdk.ModifierType.SUPER_MASK
         ):
             self.finish()
@@ -592,7 +592,7 @@ class DropWindow(Gtk.ApplicationWindow):
         if event.type != Gdk.EventType.KEY_PRESS:
             return False
         kv = event.keyval
-        if kv in (Gdk.KEY_q, Gdk.KEY_Q) and (
+        if kv in (Gdk.KEY_x, Gdk.KEY_X) and (
             event.state & Gdk.ModifierType.SUPER_MASK
         ):
             self.hide()
@@ -858,13 +858,16 @@ class DropWindow(Gtk.ApplicationWindow):
         return False
 
     def apply_input_region(self):
-        """La zona de sombra deja pasar los clics a las ventanas de abajo."""
+        """La zona de sombra deja pasar los clics a las ventanas de abajo.
+        OJO: input_shape_combine_region espera coordenadas LÓGICAS (GDK
+        escala por su cuenta); multiplicar por el factor HiDPI desplazaba
+        la región y dejaba muerta la franja de la cabecera (la X no
+        respondía al ratón en pantallas 2x)."""
         try:
-            f = self.get_scale_factor() or 1
             card = self.get_child()
             alloc = card.get_allocation()
             region = cairo.Region(cairo.RectangleInt(
-                alloc.x * f, alloc.y * f, alloc.width * f, alloc.height * f
+                alloc.x, alloc.y, alloc.width, alloc.height
             ))
             gd = self.get_window()
             if gd and alloc.width > 1:

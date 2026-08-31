@@ -167,7 +167,7 @@ icono en la barra.
 | --- | --- |
 | Aplicaciones → ConBarAI (o `conbarai`) | Abre la app completa: icono, vigía y panel |
 | `Súper+Intro` (o el atajo configurado) | Abre u oculta el panel |
-| `Súper+Q` | Oculta el panel y cierra la consola de diagnóstico (atajo global + tecla del panel) |
+| `Súper+X` | Oculta el panel y cierra la consola de diagnóstico (atajo global + tecla del panel) |
 | Icono del tray | Menú completo (ver arriba) |
 | Botón de recarga en la cabecera | Nueva sesión (OpenCode de cero, sin `-c`) |
 | Botón de cierre en la cabecera | Oculta el panel |

@@ -3,6 +3,22 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.8] - 2026-08-31
+
+### Corregido
+
+- **La X de la cabecera no respondía al ratón en pantallas HiDPI**: la
+  región de entrada se pasaba en píxeles de dispositivo cuando GDK espera
+  lógicos, dejando muerta la franja de la cabecera en escala 2x.
+  Verificado con clic sintético real: antes no ocultaba, ahora sí.
+- **Los atajos globales no capturaban** ("Failed to grab" en el journal
+  de gsd-media-keys): Súper+A era imposible (lo tiene GNOME para la
+  rejilla de aplicaciones — fuera del menú, sustituido por Súper+T) y
+  Súper+Q lo tiene el dock de Ubuntu (dash-to-dock). El atajo de ocultar
+  pasa a **Súper+X** (libre y mnemónico) y su ruta de dconf al esquema
+  estándar `custom1`. Verificado en el journal: ambos atajos capturan
+  sin errores.
+
 ## [1.5.7] - 2026-08-31
 
 ### Añadido
@@ -368,6 +384,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.8]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.8
 [1.5.7]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.7
 [1.5.6]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.6
 [1.5.5]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.5

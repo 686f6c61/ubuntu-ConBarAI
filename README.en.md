@@ -170,7 +170,7 @@ Then log out and back in (or run `oc-tray`) to see the icon in the bar.
 | --- | --- |
 | Applications → ConBarAI (or `conbarai`) | Opens the whole app: tray, watcher and panel |
 | `Super+Enter` (or the configured shortcut) | Opens or hides the panel |
-| `Super+Q` | Hides the panel and closes the diagnostic console (global shortcut + in-panel key) |
+| `Super+X` | Hides the panel and closes the diagnostic console (global shortcut + in-panel key) |
 | Tray icon | Full menu (see above) |
 | Reload button in the header | New session (OpenCode from scratch, no `-c`) |
 | Close button in the header | Hides the panel |
