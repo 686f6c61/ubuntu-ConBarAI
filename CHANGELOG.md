@@ -3,6 +3,15 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.3] - 2026-08-31
+
+### Corregido
+
+- `conbarai --update` podía dejar la app sin icono de la barra: al
+  relanzar, el `pgrep` aún veía el tray viejo muriendo y no arrancaba el
+  nuevo. Ahora espera a que el proceso desaparezca de verdad antes de
+  relanzar.
+
 ## [1.5.2] - 2026-08-31
 
 ### Añadido
@@ -298,6 +307,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.5.3]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.3
 [1.5.2]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.2
 [1.5.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.1
 [1.5.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.0

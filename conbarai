@@ -28,7 +28,12 @@ if [ "${1:-}" = "--update" ]; then
   systemctl --user try-restart oc-crash-watch.service 2>/dev/null || true
   "$BIN/oc-drop" --quit 2>/dev/null || true
   pkill -f "$BIN/oc-tray" 2>/dev/null || true
-  sleep 1
+  # esperar a que el tray viejo muera de verdad: si no, el relanzamiento
+  # lo ve "vivo" y no arranca el nuevo (carrera vista en la 1.5.2)
+  for _ in $(seq 1 25); do
+    pgrep -f "$BIN/oc-tray" >/dev/null 2>&1 || break
+    sleep 0.2
+  done
   VER="$(grep -m1 '^version' "$HOME/.local/share/conbarai/app/pyproject.toml" 2>/dev/null | cut -d'"' -f2)"
   notify-send "ConBarAI" "Actualizado a la versión ${VER:-nueva}." 2>/dev/null
   exec "$BIN/conbarai"
