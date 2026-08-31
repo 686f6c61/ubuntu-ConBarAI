@@ -239,7 +239,7 @@ footer .fila .resto{margin-left:auto}
     <a href="https://github.com/686f6c61/ubuntu-ConBarAI">github</a>
     <a href="https://x.com/686f6c61">x</a>
   </nav>
-  <span class="ver">v1.4.0</span>
+  <span class="ver">v1.6.0</span>
 </header>
 
 <main class="envoltura">
@@ -375,14 +375,23 @@ footer .fila .resto{margin-left:auto}
           <li><b>Nueva sesión…</b> y <b>Carpeta de trabajo…</b> — sesión propia por
             carpeta, o cambiar la carpeta por defecto con reinicio del panel.</li>
           <li><b>Sesiones</b> y <b>Carpetas recientes</b> — vuelve con un clic.</li>
-          <li><b>Tamaño · Transparencia · Tema · Tecla</b> — presets del panel.</li>
+          <li><b>Del tamaño que quieras</b> — estira el panel por sus bordes
+            (sombra izquierda, inferior o la esquina), como cualquier ventana:
+            se guarda como fracción de pantalla y se ve bien en cualquier
+            resolución. <span class="tenue">Súper+X lo oculta.</span></li>
+          <li><b>Transparencia · Tema · Tecla</b> — presets del panel.</li>
           <li><b>Diagnóstico de crashes</b> — consola al lado o debajo, vigía y
             análisis activables, carpeta de informes.</li>
           <li><b>Abrir continuando la última sesión (-c)</b> — retomar contexto
             al arrancar, o empezar siempre de cero.</li>
           <li><b>Ayuda</b> — el manual <span class="tenue">conbarai(1)</span> integrado, con la
             tipografía y los colores del tema activo.</li>
-          <li><b>ConBarAI 1.4.0</b> — la versión instalada enlaza al repositorio.</li>
+          <li><b>Buscar actualizaciones / Actualizar a vX.Y.Z</b> — zona siempre
+            visible: comprueba la última release al momento y actualiza en un
+            clic (también automático cada 15 min, con aviso).</li>
+          <li><b>ConBarAI x.y.z</b> — la versión instalada enlaza al repositorio.</li>
+          <li><b>Salir</b> — cierra la app entera: panel, sesiones y vigía
+            <span class="tenue">(al volver, -c retoma la conversación)</span>.</li>
         </ul>
       </div>
       <figure class="captura">
@@ -430,7 +439,7 @@ footer .fila .resto{margin-left:auto}
 <span class="a">[6/7]</span> Enlaces, skill y ajustes      <span class="ok">[OK]</span> Binarios en ~/.local/bin
 <span class="a">[7/7]</span> Vigía de crashes              <span class="ok">[OK]</span> Vigía ACTIVO
 
-<span class="ok">[OK]</span> ConBarAI v1.4.0 instalado</pre>
+<span class="ok">[OK]</span> ConBarAI v1.6.0 instalado</pre>
     </div>
     <div style="height:1rem"></div>
     <ul class="lista">
@@ -453,16 +462,17 @@ footer .fila .resto{margin-left:auto}
       <table class="ajustes">
         <tr><th>clave</th><th>valores</th><th>qué hace</th></tr>
         <tr><td class="clave">workdir</td><td class="rango">ruta</td><td class="desc">carpeta de trabajo por defecto (vacío = ~/Documentos/ConBarAI)</td></tr>
-        <tr><td class="clave">width · height</td><td class="rango">0.15-0.90 · 0.20-0.95</td><td class="desc">tamaño del panel como fracción de la pantalla</td></tr>
+        <tr><td class="clave">width · height</td><td class="rango">0.15-0.90 · 0.20-0.95</td><td class="desc">tamaño del panel (fracción; se escribe solo al estirar los bordes)</td></tr>
         <tr><td class="clave">opacity</td><td class="rango">0.50-1.00</td><td class="desc">opacidad de todo el panel</td></tr>
         <tr><td class="clave">theme</td><td class="rango">tokyo-night · catppuccin · dracula · gruvbox</td><td class="desc">tema de color</td></tr>
         <tr><td class="clave">font · font_size</td><td class="rango">auto · 7-16</td><td class="desc">tipografía (auto = JetBrains Mono Nerd) y cuerpo</td></tr>
-        <tr><td class="clave">keybinding</td><td class="rango">&lt;Super&gt;Return · &lt;Super&gt;a · ""</td><td class="desc">atajo global de apertura</td></tr>
+        <tr><td class="clave">keybinding</td><td class="rango">&lt;Super&gt;Return · &lt;Super&gt;t · ""</td><td class="desc">atajo global de apertura (Súper+X oculta)</td></tr>
         <tr><td class="clave">terminal</td><td class="rango">auto · binario</td><td class="desc">terminal del sistema (auto = Ghostty si está)</td></tr>
         <tr><td class="clave">autohide · autostart</td><td class="rango">true · false</td><td class="desc">ocultar al perder el foco; tray al iniciar sesión</td></tr>
         <tr><td class="clave">continue_session</td><td class="rango">true · false</td><td class="desc">arrancar OpenCode con -c (retoma la conversación)</td></tr>
         <tr><td class="clave">diag_pos</td><td class="rango">side · below</td><td class="desc">consola de diagnóstico al lado o debajo del panel</td></tr>
         <tr><td class="clave">crash_watch · crash_analyze</td><td class="rango">true · false</td><td class="desc">vigía de crashes; análisis con IA</td></tr>
+        <tr><td class="clave">update_check</td><td class="rango">true · false</td><td class="desc">avisar de versiones nuevas (única petición de red)</td></tr>
         <tr><td class="clave">crash_poll · crash_dedupe</td><td class="rango">segundos</td><td class="desc">cadencia del vigía (8); dedupe por programa (60)</td></tr>
       </table>
       </div>
@@ -476,7 +486,7 @@ footer .fila .resto{margin-left:auto}
         <a href="https://github.com/686f6c61/ubuntu-ConBarAI">GitHub</a> ·
         <a href="https://x.com/686f6c61">X / Twitter</a> ·
         <a href="https://github.com/686f6c61/ubuntu-ConBarAI/blob/main/CHANGELOG.md">Changelog</a> ·
-        <a href="https://github.com/686f6c61/ubuntu-ConBarAI/blob/main/LICENSE">MIT</a> · v1.4.0
+        <a href="https://github.com/686f6c61/ubuntu-ConBarAI/blob/main/LICENSE">MIT</a> · v1.6.0
       </span>
     </div>
   </footer>
