@@ -5,6 +5,7 @@ Estado del icono (alerta / trabajando / normal), menú con sesiones,
 carpetas recientes, tamaño, transparencia, tema, tecla de apertura y
 terminal del sistema. Ajustes en ~/.config/oc-drop/settings.json.
 """
+import fcntl
 import json
 import os
 import re
@@ -985,6 +986,14 @@ class Tray:
 
 def main():
     GLib.set_prgname("oc-tray")
+    # instancia única: dos trays = dos iconos en la barra
+    OC._private_dir(OC.STATE_DIR)
+    candado = open(OC.STATE_DIR / "oc-tray.lock", "w")
+    try:
+        fcntl.flock(candado, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        OC.log("oc-tray ya está corriendo; salgo")
+        return
     Tray()
     Gtk.main()
 
