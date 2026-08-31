@@ -252,10 +252,12 @@ def help_markup(theme):
     {k("Ctrl+V")} pega    {k("Ctrl+C")} copia si hay selección {dim("(si no, interrumpe")}
     {dim("al agente)")}    también {k("Ctrl+Mayús+C/V")}, {k("Mayús+Insert")} y clic derecho.
     Arrastra archivos o carpetas: se insertan como rutas listas.
-    Estira el panel por su sombra izquierda, inferior o la esquina:
-    el tamaño se guarda como fracción de pantalla y se recuerda en
-    cualquier monitor. La consola de crash se adapta sola (gemela,
-    recortada si no cabe, o debajo).
+    El panel es del tamaño que TÚ quieras: acércate a su sombra
+    izquierda, inferior o a la esquina (el cursor cambia a flecha) y
+    estira, como en cualquier ventana. Se guarda solo, como fracción
+    de pantalla, así que se ve igual de bien en cualquier monitor o
+    resolución. La consola de crash se adapta: gemela y pegada,
+    recortada si no cabe, o debajo si no hay sitio.
 
 {s("EL MENÚ DEL ICONO")}
     {k("Abrir / ocultar OpenCode")}   lo mismo que el atajo de teclado
@@ -266,7 +268,6 @@ def help_markup(theme):
     {k("Cerrar paneles")}             cierra ventanas; tmux y OpenCode viven
     {k("Sesiones")}                   vuelve a cualquier sesión abierta
     {k("Carpetas recientes")}         últimas 5 carpetas usadas
-    {k("Tamaño")}                     Pequeño · Mediano · Grande · Máximo
     {k("Transparencia")}              Opaco · Suave · Fuerte
     {k("Tema")}                       Tokyo Night · Catppuccin · Dracula ·
                                Gruvbox
@@ -457,12 +458,6 @@ SVG_FORMAT = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 class Tray:
-    SIZES = (
-        ("Pequeño", 0.28, 0.50),
-        ("Mediano", 0.34, 0.62),
-        ("Grande", 0.42, 0.75),
-        ("Máximo", 0.60, 0.88),
-    )
     OPACITIES = (
         ("Opaco", 1.00),
         ("Suave", 0.90),
@@ -671,7 +666,6 @@ class Tray:
             item_rec.set_submenu(sub)
             menu.append(item_rec)
 
-        menu.append(self.build_size_menu(settings))
         menu.append(self.build_opacity_menu(settings))
         menu.append(self.build_theme_menu(settings))
         menu.append(self.build_key_menu(settings))
@@ -748,16 +742,6 @@ class Tray:
 
         menu.show_all()
         self.indicator.set_menu(menu)
-
-    def build_size_menu(self, settings):
-        item_size = icon_item("Tamaño", ["zoom-fit-best-symbolic"])
-        sub = Gtk.Menu()
-        current = (float(settings.get("width", 0.34)), float(settings.get("height", 0.62)))
-        for label, w, h in self.SIZES:
-            active = abs(current[0] - w) < 0.01 and abs(current[1] - h) < 0.01
-            sub.append(radio_item(label, active, lambda _i, w=w, h=h: self.on_size(w, h)))
-        item_size.set_submenu(sub)
-        return item_size
 
     def build_opacity_menu(self, settings):
         item_op = icon_item("Transparencia", ["weather-fog-symbolic"])
@@ -993,10 +977,6 @@ class Tray:
         enabled = OC.set_autostart(not OC.autostart_enabled())
         self._update_setting("autostart", enabled)
         self.rebuild_menu()
-
-    def on_size(self, width, height):
-        self._update_setting("width", width)
-        self._update_setting("height", height)
 
     def on_key(self, binding):
         self._update_setting("keybinding", binding)

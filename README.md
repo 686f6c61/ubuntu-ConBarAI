@@ -90,11 +90,11 @@ systemctl --user status oc-crash-watch
   de trabajo.
 - **Cerrar paneles** — cierra las ventanas; tmux y OpenCode siguen vivos.
 - **Sesiones** y **Carpetas recientes** — vuelve a cualquiera con un clic.
-- **Tamaño**, **Transparencia**, **Tema**, **Tecla de apertura** —
-  presets del panel. El tamaño también se ajusta **estirando el panel
-  por sus bordes** (sombra izquierda, inferior o la esquina): se guarda
-  como fracción de pantalla y se ve igual de bien en cualquier
-  resolución.
+- **Transparencia**, **Tema**, **Tecla de apertura** — presets del
+  panel. El tamaño no tiene presets: **estira el panel por sus bordes**
+  (sombra izquierda, inferior o la esquina) y hazlo del tamaño que
+  quieras — se guarda como fracción de pantalla y se ve igual de bien
+  en cualquier resolución.
 - **Diagnóstico de crashes** — posición de la consola, vigía y análisis
   activables, y acceso a la carpeta de informes.
 - **Abrir continuando la última sesión (-c)** — retomar contexto al
@@ -212,7 +212,7 @@ La cabecera muestra un punto verde (sesión viva), rojo (muerta) o ámbar
 | `autohide` | Ocultar el panel cuando pierde el foco | true / false |
 | `autostart` | Arranca el tray al iniciar sesión (también en el menú del tray) | true / false |
 | `workdir` | Carpeta de ejecución de OpenCode. Vacío = `~/Documentos/ConBarAI`. La pregunta el instalador y se cambia desde el tray ("Carpeta de trabajo…", reinicia el panel) | ruta |
-| `width` | Ancho del panel (fracción del área de trabajo) | 0.15 - 0.90 |
+| `width` | Ancho del panel (fracción; se escribe solo al estirar los bordes) | 0.15 - 0.90 |
 | `height` | Alto del panel (fracción del área de trabajo) | 0.20 - 0.95 |
 | `opacity` | Opacidad del panel | 0.50 - 1.00 |
 | `keybinding` | Atajo global de apertura. `""` = desactivado | `<Super>Return`, `<Super>a`, ... |

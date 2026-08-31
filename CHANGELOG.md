@@ -11,8 +11,8 @@ y adherido al [Versionado Semántico](https://semver.org/lang/es/).
   ventana: la sombra izquierda, la inferior y su esquina son asas (con
   cursor de redimensionado), manteniendo el anclaje arriba-derecha. El
   tamaño se guarda como fracción de pantalla (con retardo de 0,6 s), así
-  se ve igual de proporcionado en cualquier resolución o monitor. Los
-  presets de Tamaño siguen como atajos.
+  se ve igual de proporcionado en cualquier resolución o monitor. El
+  submenú de presets de Tamaño desaparece: el tamaño es libre.
 - **La consola de crash se adapta al panel**: gemela y pegada (hueco de
   8 px, antes 25) con su misma altura; recortada al espacio libre si el
   panel es muy ancho (mínimo legible de 300 px); cae a "debajo"

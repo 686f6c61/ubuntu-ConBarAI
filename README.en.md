@@ -94,10 +94,10 @@ systemctl --user status oc-crash-watch
   working folder.
 - **Close panels** — closes the windows; tmux and OpenCode stay alive.
 - **Sessions** and **Recent folders** — jump back with one click.
-- **Size**, **Transparency**, **Theme**, **Shortcut key** — panel
-  presets. Size can also be set by **dragging the panel's edges** (left
-  shadow, bottom shadow or the corner): it is stored as a screen
-  fraction and looks right on any resolution.
+- **Transparency**, **Theme**, **Shortcut key** — panel presets.
+  Size has no presets: **drag the panel's edges** (left shadow, bottom
+  shadow or the corner) and make it any size you want — it is stored as
+  a screen fraction and looks right on any resolution.
 - **Crash diagnostics** — console position, watcher and AI analysis
   toggles, and quick access to the reports folder.
 - **Open continuing the last session (-c)** — resume context on start,
@@ -214,7 +214,7 @@ attention), the working folder and the usage.
 | `autohide` | Hide the panel when it loses focus | true / false |
 | `autostart` | Start the tray on login (also in the tray menu) | true / false |
 | `workdir` | OpenCode's working folder. Empty = `~/Documents/ConBarAI`. Asked by the installer, changeable from the tray ("Working folder…", restarts the panel) | path |
-| `width` | Panel width (fraction of the work area) | 0.15 - 0.90 |
+| `width` | Panel width (fraction; written automatically when dragging the edges) | 0.15 - 0.90 |
 | `height` | Panel height (fraction of the work area) | 0.20 - 0.95 |
 | `opacity` | Panel opacity | 0.50 - 1.00 |
 | `keybinding` | Global shortcut. `""` = disabled | `<Super>Return`, `<Super>a`, ... |
