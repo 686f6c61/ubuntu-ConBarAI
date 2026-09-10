@@ -159,7 +159,7 @@ icono en la barra.
 ### Requisitos
 
 - GNOME en Wayland (probado en GNOME 50 / Ubuntu; la ventana usa XWayland)
-- `python3-gi` + `gir1.2-vte-2.91` + `gir1.2-ayatanaappindicator3-0.1`
+- `python3-gi` + `python3-cairo` + `python3-gi-cairo` + `gir1.2-vte-2.91` + `gir1.2-ayatanaappindicator3-0.1`
 - `wmctrl`, `xdotool`, `tmux`, `libnotify-bin`
 - `opencode` en el PATH
 - Para el vigía: usuario en el grupo `adm` (el de Ubuntu por defecto)

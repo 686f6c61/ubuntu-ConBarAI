@@ -3,6 +3,24 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y adherido al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.6.1] - 2026-09-10
+
+### Corregido
+
+- **`KeyError: 'could not find foreign type Region'` en Ubuntu 26.04
+  limpio** ([#1](https://github.com/686f6c61/ubuntu-ConBarAI/issues/1)):
+  PyGObject no puede pasar un `cairo.Region` a GDK sin `python3-gi-cairo`,
+  y `import cairo` necesita `python3-cairo`; `python3-gi` no arrastra
+  ninguno de los dos. El instalador, la AppImage y el README los exigen
+  ahora, y `install.sh` comprueba que `/usr/bin/python3` importa `gi` y
+  `cairo` de verdad.
+- **Los ejecutables usan `#!/usr/bin/python3`** en vez de `env python3`:
+  un Python de Homebrew, pyenv o conda por delante en el PATH no ve los
+  paquetes apt y fallaba con `No module named 'cairo'` o `'gi'`.
+- Si aun así falta `python3-gi-cairo`, el panel arranca igual y deja en
+  el log un aviso con el paquete a instalar en vez de escupir el
+  traceback.
+
 ## [1.6.0] - 2026-08-31
 
 ### Añadido
@@ -415,6 +433,7 @@ Primera versión estable, lista para la comunidad de Ubuntu.
 - Localización de la carpeta de ejecución por defecto
   (`~/Documentos` o `~/Documents`).
 
+[1.6.1]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.6.1
 [1.6.0]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.6.0
 [1.5.9]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.9
 [1.5.8]: https://github.com/686f6c61/ubuntu-ConBarAI/releases/tag/v1.5.8

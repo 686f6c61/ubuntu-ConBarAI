@@ -40,9 +40,9 @@ avisa() {
     || echo "[!] $1" >&2
 }
 
-if ! python3 -c "import gi" 2>/dev/null; then
+if ! /usr/bin/python3 -c "import cairo, gi, gi._gi_cairo" 2>/dev/null; then
   avisa "Faltan dependencias del sistema. Instálalas con:
-sudo apt install python3-gi gir1.2-vte-2.91 gir1.2-ayatanaappindicator3-0.1 tmux libnotify-bin"
+sudo apt install python3-gi python3-cairo python3-gi-cairo gir1.2-vte-2.91 gir1.2-ayatanaappindicator3-0.1 tmux libnotify-bin"
   exit 1
 fi
 

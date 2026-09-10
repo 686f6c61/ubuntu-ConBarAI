@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 """oc-crash-run: analiza con IA un crash del sistema ya detectado (ConBarAI).
 
 Lo lanza oc-crash-watch (desacoplado) cuando aparece un crash y `crash_analyze`

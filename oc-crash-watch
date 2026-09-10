@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 """oc-crash-watch: detecta crashes del sistema Ubuntu y avisa (ConBarAI).
 
 Vigila el journal del kernel (el usuario está en `adm`, sin sudo) buscando

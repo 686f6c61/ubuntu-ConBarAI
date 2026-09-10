@@ -161,7 +161,7 @@ Then log out and back in (or run `oc-tray`) to see the icon in the bar.
 ### Requirements
 
 - GNOME on Wayland (tested on GNOME 50 / Ubuntu; the window uses XWayland)
-- `python3-gi` + `gir1.2-vte-2.91` + `gir1.2-ayatanaappindicator3-0.1`
+- `python3-gi` + `python3-cairo` + `python3-gi-cairo` + `gir1.2-vte-2.91` + `gir1.2-ayatanaappindicator3-0.1`
 - `wmctrl`, `xdotool`, `tmux`, `libnotify-bin`
 - `opencode` on the PATH
 - For the watcher: user in the `adm` group (Ubuntu's default)

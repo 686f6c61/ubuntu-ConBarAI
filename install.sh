@@ -58,7 +58,7 @@ mkdir -p "$BIN" "$SHARE" "$CONFIG" "$AUTOSTART"
 
 # --- [1/7] dependencias del panel ---
 paso 1 "Dependencias del panel"
-DEPS=(python3-gi gir1.2-vte-2.91 gir1.2-ayatanaappindicator3-0.1 wmctrl xdotool tmux libnotify-bin)
+DEPS=(python3-gi python3-cairo python3-gi-cairo gir1.2-vte-2.91 gir1.2-ayatanaappindicator3-0.1 wmctrl xdotool tmux libnotify-bin)
 MISSING=()
 for dep in "${DEPS[@]}"; do
   dpkg -s "$dep" >/dev/null 2>&1 || MISSING+=("$dep")
@@ -75,6 +75,15 @@ if [ ${#MISSING[@]} -gt 0 ]; then
   fi
 else
   ok "Todas presentes (${#DEPS[@]})"
+fi
+# Los ejecutables van con /usr/bin/python3 a propósito: un Python de
+# Homebrew, pyenv o conda por delante en el PATH no ve los paquetes apt
+# (falla "import cairo" o "import gi", o aparece
+# KeyError: 'could not find foreign type Region' sin python3-gi-cairo).
+if /usr/bin/python3 -c "import cairo, gi, gi._gi_cairo" 2>/dev/null; then
+  ok "/usr/bin/python3 ve gi y cairo"
+else
+  warn "/usr/bin/python3 no importa gi+cairo; revisa: sudo apt install python3-gi python3-cairo python3-gi-cairo"
 fi
 
 # --- [2/7] terminal del sistema: Ghostty o el que tenga el usuario ---

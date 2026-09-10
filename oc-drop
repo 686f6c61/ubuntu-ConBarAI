@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 """oc-drop: paneles flotantes estilo Omarchy con OpenCode (ConBarAI).
 
 GTK3+VTE sobre XWayland: esquinas redondeadas, sombra, temas, esquina
@@ -1005,6 +1005,12 @@ class DropWindow(Gtk.ApplicationWindow):
             gd = self.get_window()
             if gd and alloc.width > 1:
                 gd.input_shape_combine_region(region, 0, 0)
+        except KeyError as e:
+            # PyGObject no sabe pasar cairo.Region a GDK sin python3-gi-cairo
+            # ('could not find foreign type Region'); el panel funciona,
+            # pero la sombra no deja pasar los clics (issue #1).
+            OC.log("región de entrada no aplicada:", e,
+                   "- instala python3-gi-cairo (sudo apt install python3-gi-cairo)")
         except (OSError, ValueError) as e:
             OC.log("región de entrada no aplicada:", e)
         return False
